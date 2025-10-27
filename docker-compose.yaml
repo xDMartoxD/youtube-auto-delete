@@ -1,0 +1,55 @@
+services:
+  fastapi:
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - "8080:80"
+      - "5678:5678" # puerto para debugpy
+    volumes:
+      - ./src:/app/src:ro
+    env_file:
+      - .env
+    command:
+      [
+        "python",
+        "-m",
+        "debugpy",
+        "--listen",
+        "0.0.0.0:5678",
+        "-m",
+        "uvicorn",
+        "src.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "80",
+        "--reload",
+        "--log-level",
+        "debug",
+      ]
+    depends_on:
+      - dynamodb
+  # ...existing code...
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+  # ...existing code...
+
+  # DynamoDB web admin UI
+  dynamodb-admin:
+    image: instructure/dynamo-local-admin
+    container_name: dynamodb-admin
+    environment:
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - AWS_REGION=us-east-1
+      - PORT=8001
+    ports:
+      - "8001:8001"
+    depends_on:
+      - dynamodb
+volumes:
+  dynamodb_data:

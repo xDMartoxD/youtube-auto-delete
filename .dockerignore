@@ -1,0 +1,27 @@
+# Virtual envs
+.venv
+venv
+env
+
+# Python caches
+__pycache__
+*.py[cod]
+.pytest_cache
+
+# Git
+.git
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets and configs
+.env
+docker-compose.yaml
+
+# Node etc (if present)
+node_modules
+
+# Do NOT ignore the root Dockerfile used to build the image
+# (remove any line like '**/Dockerfile' that would exclude it)

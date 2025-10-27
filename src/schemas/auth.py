@@ -90,7 +90,6 @@ class GoogleUserResponse(BaseModel):
 class SessionPayload(TypedDict):
     sub: str
     jti: str
-    refresh_at: int
     exp: int
     iat: int
 
@@ -105,7 +104,7 @@ class SessionCookieData(BaseModel):
     path: str
 
 
-class SessionValidationSuccess(TypedDict):
+class SessionValidation(TypedDict):
     """TypedDict para respuesta exitosa de validación de sesión."""
 
     authenticated: bool
@@ -113,5 +112,5 @@ class SessionValidationSuccess(TypedDict):
     session_id: str
     access_token: str
     token_refreshed: bool
-    new_session_token: str
+    new_session_token: str | None
     refresh_expires_at: int | None

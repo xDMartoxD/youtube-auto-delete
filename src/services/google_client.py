@@ -1,5 +1,5 @@
 from pydantic import ValidationError
-from src.domain.schemas.auth import (
+from src.schemas.auth import (
     GoogleAuthResponse,
     GoogleUserResponse,
     GoogleUserInfo,
@@ -115,7 +115,7 @@ class GoogleClient:
         body = resp.json()
         try:
             return GoogleAuthResponse.model_validate(body)
-        except ValidationError as e:
+        except ValidationError:
             raise AuthenticationFailedError(
                 message="There was an error validating the refresh response"
             )

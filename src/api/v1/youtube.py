@@ -1,13 +1,12 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status, HTTPException
-from src.domain.schemas.youtube import (
+from src.schemas.youtube import (
     PaginationParams,
     PlaylistVideoResponse,
     YoutubePlaylistListResponse,
 )
-from src.domain.services.youtube import YoutubeService
-from src.api.deps import get_youtube_service_for_user, get_request_state_dependency
-from src.middlewares.session import RequestState
+from src.services.youtube import YoutubeService
+from src.api.deps import get_youtube_service, youtube_service_dependency
 
 router = APIRouter()
 
@@ -15,7 +14,7 @@ router = APIRouter()
 @router.get("/playlists", status_code=status.HTTP_200_OK)
 async def get_user_playlists(
     pagination_query: Annotated[PaginationParams, Query()],
-    youtube_service: YoutubeService = Depends(get_youtube_service_for_user),
+    youtube_service: youtube_service_dependency,
 ) -> YoutubePlaylistListResponse:
     """Get user's YouTube playlists with pagination."""
     playlists = await youtube_service.get_user_playlists(pagination_query)
@@ -27,7 +26,7 @@ async def get_user_playlists(
 )
 async def get_watch_later_playlist(
     pagination_query: Annotated[PaginationParams, Query()],
-    youtube_service: YoutubeService = Depends(get_youtube_service_for_user),
+    youtube_service: youtube_service_dependency,
 ) -> PlaylistVideoResponse:
     """
     Get user's Watch Later playlist with pagination.
@@ -40,7 +39,7 @@ async def get_watch_later_playlist(
 
 @router.get("/watch-later/info", status_code=status.HTTP_200_OK)
 async def get_watch_later_info(
-    youtube_service: YoutubeService = Depends(get_youtube_service_for_user),
+    youtube_service: youtube_service_dependency,
 ) -> dict:
     """Get information about the user's Watch Later playlist."""
     return await youtube_service.get_watch_later_info()
@@ -49,7 +48,7 @@ async def get_watch_later_info(
 @router.post("/watch-later/add/{video_id}", status_code=status.HTTP_201_CREATED)
 async def add_to_watch_later(
     video_id: str,
-    youtube_service: YoutubeService = Depends(get_youtube_service_for_user),
+    youtube_service: youtube_service_dependency,
 ) -> dict:
     """
     Add a video to the user's Watch Later playlist.
@@ -67,7 +66,7 @@ async def add_to_watch_later(
 @router.delete("/watch-later/remove/{playlist_item_id}", status_code=status.HTTP_200_OK)
 async def remove_from_watch_later(
     playlist_item_id: str,
-    youtube_service: YoutubeService = Depends(get_youtube_service_for_user),
+    youtube_service: youtube_service_dependency,
 ) -> dict:
     """
     Remove a video from the user's Watch Later playlist.

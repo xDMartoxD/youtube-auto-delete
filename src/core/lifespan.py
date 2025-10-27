@@ -1,7 +1,7 @@
 # core/lifespan.py
 import asyncio
 from contextlib import asynccontextmanager
-from src.domain.services.google_client import GoogleClient
+from src.services.google_client import GoogleClient
 from src.db.core import ensure_table  # idempotente
 
 

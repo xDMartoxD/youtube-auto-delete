@@ -1,11 +1,12 @@
-from src.domain.schemas.youtube import (
+from typing import Any
+from src.schemas.auth import SessionValidation
+from src.schemas.youtube import (
     PaginationParams,
     PlaylistVideoResponse,
     YoutubePlaylistListResponse,
 )
 
-from src.db.repositories.auth import AuthRepository
-from src.domain.services.google_client import GoogleClient
+
 import logging
 
 from googleapiclient.discovery import build
@@ -17,27 +18,12 @@ logger = logging.getLogger(__name__)
 class YoutubeService:
     def __init__(
         self,
-        google_client: GoogleClient,
-        auth_repo: AuthRepository,
-        user_sub: str,
-        access_token: str,
+        session: SessionValidation,
     ):
-        self.google_client = google_client
-        self.auth_repo = auth_repo
-        self.user_sub = user_sub
-        self._youtube_client = None
-        self._access_token = None
-        self._initialized = False
-
-    async def initialize(self):
-        """Initialize service with valid token and YouTube client."""
-        if self._initialized:
-            return
-
+        self._session = session
         self._youtube_client = build(
-            "youtube", "v3", credentials=Credentials(self._access_token)
+            "youtube", "v3", credentials=Credentials(self._session["access_token"])
         )
-        self._initialized = True
 
     async def get_user_playlists(
         self, pagination: PaginationParams
@@ -126,7 +112,6 @@ class YoutubeService:
         Get information about the user's Watch Later playlist.
         Returns basic info about the playlist itself.
         """
-        await self.initialize()
 
         # Obtener información de la playlist Watch Later
         playlist_info = (
@@ -151,7 +136,6 @@ class YoutubeService:
         """
         Add a video to the user's Watch Later playlist.
         """
-        await self.initialize()
 
         # Agregar video a Watch Later
         request_body = {
@@ -178,7 +162,6 @@ class YoutubeService:
         """
         Remove a video from the user's Watch Later playlist.
         """
-        await self.initialize()
 
         # Eliminar video de Watch Later
         self._youtube_client.playlistItems().delete(id=playlist_item_id).execute()

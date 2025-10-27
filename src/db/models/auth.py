@@ -1,7 +1,7 @@
 # db/models/user.py
 from dataclasses import dataclass
 from typing import Dict, Any, Literal
-from src.domain.schemas.auth import GoogleAuthResponse, GoogleUserResponse
+from src.schemas.auth import GoogleAuthResponse, GoogleUserResponse
 from src.db.core import Types
 from uuid import uuid4
 
@@ -10,7 +10,7 @@ from uuid import uuid4
 class TokenModel:
     PK: str
     SK: str
-    type: Literal[Types.TOKEN]
+    type: str
     provider: Literal["google"]
     token_id: str
     access_token: str

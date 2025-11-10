@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Depends, status, Response
 
-from src.api.deps import auth_service_dependency, get_current_session
+from src.api.deps import (
+    auth_service_dependency,
+    current_session_dependency,
+    get_current_session,
+)
 from src.schemas.auth import (
     GoogleCodeLogin,
     AuthSuccessResponse,
@@ -51,11 +55,17 @@ async def code_login(
     )
 
 
-@router.post("/logout", status_code=status.HTTP_200_OK)
-async def logout(response: Response) -> dict:
+@router.post("/logout", status_code=status.HTTP_202_ACCEPTED)
+async def logout(
+    response: Response,
+    auth_service: auth_service_dependency,
+    session: current_session_dependency,
+) -> dict:
     """
     Logout the current user by clearing the session cookie.
     """
+
+    await auth_service.logout(session)
     response.delete_cookie(
         key="session_token",
         path="/",

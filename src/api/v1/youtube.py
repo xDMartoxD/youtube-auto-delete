@@ -1,81 +1,68 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Query, status, HTTPException
+from fastapi import APIRouter, Body, Depends, Query, status
 from src.schemas.youtube import (
+    DeletePlaylistVideosRequest,
     PaginationParams,
+    PlaylistVideoQueryParams,
     PlaylistVideoResponse,
     YoutubePlaylistListResponse,
 )
-from src.services.youtube import YoutubeService
-from src.api.deps import get_youtube_service, youtube_service_dependency
+from src.api.deps import current_session_dependency, youtube_service_dependency
+from src.api.utils import get_pagination_params, get_playlist_video_query_params
 
 router = APIRouter()
 
 
 @router.get("/playlists", status_code=status.HTTP_200_OK)
 async def get_user_playlists(
-    pagination_query: Annotated[PaginationParams, Query()],
     youtube_service: youtube_service_dependency,
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> YoutubePlaylistListResponse:
     """Get user's YouTube playlists with pagination."""
-    playlists = await youtube_service.get_user_playlists(pagination_query)
+    playlists = await youtube_service.get_user_playlists(pagination)
     return playlists
 
 
-@router.get(
-    "/watch-later", status_code=status.HTTP_200_OK, response_model=PlaylistVideoResponse
-)
-async def get_watch_later_playlist(
-    pagination_query: Annotated[PaginationParams, Query()],
+@router.get("/playlists/{playlist_id}/videos", status_code=status.HTTP_200_OK)
+async def get_playlist_videos(
+    playlist_id: str,
     youtube_service: youtube_service_dependency,
+    query_params: Annotated[
+        PlaylistVideoQueryParams, Depends(get_playlist_video_query_params)
+    ],
 ) -> PlaylistVideoResponse:
     """
-    Get user's Watch Later playlist with pagination.
+    Get videos from a YouTube playlist with pagination and optional date filtering.
 
     - **max_results**: Número máximo de resultados por página (1-50)
-    - **page_token**: Token de página para navegación
+    - **page_token**: Token de página para paginación
+    - **date_from**: Filtrar videos agregados a la playlist desde esta fecha (ISO 8601)
+    - **date_to**: Filtrar videos agregados a la playlist hasta esta fecha (ISO 8601)
     """
-    return await youtube_service.get_watch_later_playlist(pagination_query)
+    pagination = query_params.pagination
+    date_range = query_params.date_range
 
-
-@router.get("/watch-later/info", status_code=status.HTTP_200_OK)
-async def get_watch_later_info(
-    youtube_service: youtube_service_dependency,
-) -> dict:
-    """Get information about the user's Watch Later playlist."""
-    return await youtube_service.get_watch_later_info()
-
-
-@router.post("/watch-later/add/{video_id}", status_code=status.HTTP_201_CREATED)
-async def add_to_watch_later(
-    video_id: str,
-    youtube_service: youtube_service_dependency,
-) -> dict:
-    """
-    Add a video to the user's Watch Later playlist.
-
-    - **video_id**: ID del video de YouTube a agregar
-    """
-    try:
-        return await youtube_service.add_to_watch_later(video_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Failed to add video to Watch Later: {str(e)}"
+    if date_range:
+        videos = await youtube_service.get_playlist_videos_by_date_ranges(
+            playlist_id,
+            date_range,
+        )
+    else:
+        videos = await youtube_service.get_playlist_videos(
+            playlist_id,
+            pagination,
         )
 
+    return videos
 
-@router.delete("/watch-later/remove/{playlist_item_id}", status_code=status.HTTP_200_OK)
-async def remove_from_watch_later(
-    playlist_item_id: str,
+
+@router.post("/playlists/{playlist_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_playlist_videos(
+    playlist_id: str,
+    request: Annotated[
+        DeletePlaylistVideosRequest, Body(media_type="application/json")
+    ],
     youtube_service: youtube_service_dependency,
-) -> dict:
-    """
-    Remove a video from the user's Watch Later playlist.
-
-    - **playlist_item_id**: ID del item en la playlist (no el video_id)
-    """
-    try:
-        return await youtube_service.remove_from_watch_later(playlist_item_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Failed to remove video from Watch Later: {str(e)}"
-        )
+    session: current_session_dependency,
+) -> None:
+    pass

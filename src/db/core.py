@@ -97,3 +97,4 @@ class Types(str, Enum):
     PROFILE = "PROFILE"
     TOKEN = "TOKEN"
     EMAIL = "EMAIL"
+    SUGGESTION = "SUGGESTION"

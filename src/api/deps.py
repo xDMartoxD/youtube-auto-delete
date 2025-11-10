@@ -8,8 +8,10 @@ from src.core.exceptions import AuthenticationFailedError
 from src.schemas.auth import SessionValidation
 from src.services.youtube import YoutubeService
 from src.services.auth import AuthService
+from src.services.suggestions import SuggestionsService
 from src.services.google_client import GoogleClient
 from src.db.repositories.auth import AuthRepository
+from src.db.repositories.suggestions import SuggestionsRepository
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +96,32 @@ async def get_youtube_service(
     session: current_session_dependency,
 ) -> AsyncGenerator[YoutubeService, None]:
     """Create and initialize YouTube service for authenticated user."""
-    yield YoutubeService(session)
+    service = YoutubeService(session)
+    await service.initialize()
+    try:
+        yield service
+    finally:
+        # cleanup si es necesario en el futuro
+        pass
 
 
 youtube_service_dependency = Annotated[YoutubeService, Depends(get_youtube_service)]
+
+
+@lru_cache
+def _get_suggestions_repository() -> SuggestionsRepository:
+    return SuggestionsRepository()
+
+
+def get_suggestions_service(
+    suggestions_repo: SuggestionsRepository = Depends(_get_suggestions_repository),
+) -> Generator[SuggestionsService, None, None]:
+    svc = SuggestionsService(suggestions_repo)
+    try:
+        yield svc
+    finally:
+        # cleanup si es necesario
+        pass
+
+
+suggestions_service_dependency = Annotated[SuggestionsService, Depends(get_suggestions_service)]

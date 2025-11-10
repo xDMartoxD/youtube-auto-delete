@@ -1,11 +1,14 @@
-from ast import Tuple
 import jwt
 import time
 import uuid
 import logging
 from datetime import datetime, timezone
 from src.core.config import config
-from src.core.exceptions import AuthenticationFailedError, YoutubeAutoDeleteApiError
+from src.core.exceptions import (
+    AuthenticationFailedError,
+    LogoutFailedError,
+    YoutubeAutoDeleteApiError,
+)
 from src.db.models.auth import TokenModel
 from src.db.repositories.auth import AuthRepository
 from src.services.google_client import GoogleClient
@@ -238,3 +241,12 @@ class AuthService:
             "new_session_token": None,
             "refresh_expires_at": token_data.refresh_expires_at,
         }
+
+    async def logout(self, session: SessionValidation) -> None:
+        """Cierra la sesión del usuario."""
+        try:
+            await self.auth_repo.delete_token(session["user_sub"])
+            await self.client.revoke_access_token(session["access_token"])
+        except Exception as e:
+            logger.error(f"Failed to logout user: {session['user_sub']}: {str(e)}")
+            raise LogoutFailedError()

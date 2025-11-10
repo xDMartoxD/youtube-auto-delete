@@ -101,3 +101,24 @@ class AwsFailedError(YoutubeAutoDeleteApiError):
     """AWS service error"""
 
     pass
+
+
+@register_exception(status.HTTP_400_BAD_REQUEST, "Invalid date range parameters")
+class InvalidDateRangeError(YoutubeAutoDeleteApiError):
+    """Invalid date range parameters"""
+
+    pass
+
+
+@register_exception(404, "Suggestion not found")
+class SuggestionNotFoundError(YoutubeAutoDeleteApiError):
+    """Sugerencia no encontrada."""
+
+    pass
+
+
+@register_exception(500, "Failed to logout user")
+class LogoutFailedError(YoutubeAutoDeleteApiError):
+    """Failed to logout user"""
+
+    pass

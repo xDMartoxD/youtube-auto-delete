@@ -120,6 +120,17 @@ class GoogleClient:
                 message="There was an error validating the refresh response"
             )
 
+    async def revoke_access_token(self, access_token: str) -> None:
+        """
+        Revoca un access token.
+        """
+        try:
+            creds = Credentials(token=access_token)
+            service = build("oauth2", "v2", credentials=creds)
+            service.token().revoke().execute()
+        except HttpError as e:
+            raise AuthenticationFailedError(message="Google API error: " + str(e))
+
     async def close(self):
         try:
             await self._client.aclose()

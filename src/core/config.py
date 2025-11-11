@@ -40,6 +40,28 @@ class Config(BaseSettings):
     # CORS settings
     cors_origins: str = Field(default="*", description="Allowed CORS origins")
 
+    # Redis settings
+    redis_host: str = Field(
+        default="localhost", description="Redis host (local or ElastiCache endpoint)"
+    )
+    redis_port: int = Field(default=6379, description="Redis port")
+    redis_db: int = Field(default=0, description="Redis database number")
+    redis_password: str | None = Field(
+        default=None, description="Redis password (required for ElastiCache with auth)"
+    )
+    redis_url: str | None = Field(
+        default=None,
+        description="Redis connection URL (recommended for ElastiCache). Format: redis://[password@]host:port or rediss://[password@]host:port (TLS).",
+    )
+    redis_use_tls: bool = Field(
+        default=False,
+        description="Use TLS/SSL for Redis connection (required for ElastiCache in-transit encryption)",
+    )
+    redis_ssl_cert_reqs: str = Field(
+        default="required",
+        description="SSL certificate requirements: 'none', 'optional', or 'required'",
+    )
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

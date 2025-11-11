@@ -28,9 +28,25 @@ services:
         "--log-level",
         "debug",
       ]
+    environment:
+      # Local development - use local Redis container
+      # For production/ElastiCache, set REDIS_URL in .env file instead
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      # Uncomment and set for ElastiCache:
+      # - REDIS_URL=rediss://:password@your-elasticache-endpoint.cache.amazonaws.com:6379
+      # - REDIS_USE_TLS=true
     depends_on:
       - dynamodb
-  # ...existing code...
+      - redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
   dynamodb:
     image: amazon/dynamodb-local
     container_name: dynamodb-local
@@ -53,3 +69,4 @@ services:
       - dynamodb
 volumes:
   dynamodb_data:
+  redis_data:

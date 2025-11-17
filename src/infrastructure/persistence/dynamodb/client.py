@@ -10,4 +10,5 @@ dynamodb: DynamoDBServiceResource = boto3.resource(
     region_name=config.aws_region,
     aws_access_key_id=config.aws_access_key_id,
     aws_secret_access_key=config.aws_secret_access_key,
+    endpoint_url=config.dynamodb_endpoint,
 )

@@ -18,7 +18,8 @@ class Config(BaseSettings):
         default="youtube-delete-app", description="DynamoDB table name"
     )
     dynamodb_endpoint: str | None = Field(
-        default="http://localhost:8000", description="DynamoDB endpoint"
+        default=None,
+        description="DynamoDB endpoint. Use 'http://localhost:8000' for local DynamoDB, or leave empty/None for AWS DynamoDB in production",
     )
     aws_region: str = Field(default="us-east-1", description="AWS region")
     aws_access_key_id: str = Field(default="fakeMyKeyId", description="AWS access key")
@@ -40,14 +41,16 @@ class Config(BaseSettings):
     # CORS settings
     cors_origins: str = Field(
         default="http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000",
-        description="Allowed CORS origins (comma-separated list)"
+        description="Allowed CORS origins (comma-separated list)",
     )
 
     def get_cors_origins(self) -> list[str]:
         """Parse CORS origins from comma-separated string."""
         if self.cors_origins == "*":
             return ["*"]
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        return [
+            origin.strip() for origin in self.cors_origins.split(",") if origin.strip()
+        ]
 
     # Redis settings
     redis_host: str = Field(
@@ -72,9 +75,7 @@ class Config(BaseSettings):
     )
 
     # Rate limiting settings
-    rate_limit_enabled: bool = Field(
-        default=True, description="Enable rate limiting"
-    )
+    rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
     rate_limit_per_minute: int = Field(
         default=60, description="Maximum requests per minute per IP"
     )
@@ -90,10 +91,14 @@ class Config(BaseSettings):
         default=3600, description="Cache TTL for playlist videos (1 hour)"
     )
     cache_ttl_playlist_videos_by_date: int = Field(
-        default=3600, description="Cache TTL for playlist videos filtered by date (1 hour)"
+        default=3600,
+        description="Cache TTL for playlist videos filtered by date (1 hour)",
     )
     cache_ttl_user_profile: int = Field(
         default=3600, description="Cache TTL for user profile (1 hour)"
+    )
+    cache_ttl_user_session: int = Field(
+        default=600, description="Cache TTL for user session (10 minutes)"
     )
     cache_ttl_default: int = Field(
         default=3600, description="Default cache TTL (1 hour)"

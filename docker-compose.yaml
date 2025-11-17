@@ -57,12 +57,13 @@ services:
 
   # DynamoDB web admin UI
   dynamodb-admin:
-    image: instructure/dynamo-local-admin
+    image: aaronshaf/dynamodb-admin:latest
     container_name: dynamodb-admin
     environment:
-      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - DYNAMO_ENDPOINT=http://dynamodb:8000
       - AWS_REGION=us-east-1
-      - PORT=8001
+      - AWS_ACCESS_KEY_ID=fakeMyKeyId
+      - AWS_SECRET_ACCESS_KEY=fakeSecretAccessKey
     ports:
       - "8001:8001"
     depends_on:

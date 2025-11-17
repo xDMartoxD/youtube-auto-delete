@@ -444,19 +444,11 @@ class YoutubeService:
         Returns:
             True if the video is deleted, False otherwise
         """
-        title = item.snippet.title
-        description = item.snippet.description or ""
-        video_published_at = item.contentDetails.videoPublishedAt
-
-        # Check by title and description using constants
-        is_deleted_by_title = title == DELETED_VIDEO_TITLE
-        is_deleted_by_description = description == DELETED_VIDEO_DESCRIPTION
-
-        # Also check if videoPublishedAt is None (common indicator of deleted video)
-        is_deleted_by_metadata = video_published_at is None
-
+        snippet = item.snippet
         return (
-            is_deleted_by_title or is_deleted_by_description or is_deleted_by_metadata
+            snippet.title == DELETED_VIDEO_TITLE
+            or (snippet.description or "") == DELETED_VIDEO_DESCRIPTION
+            or item.contentDetails.videoPublishedAt is None
         )
 
     def _is_private_video(self, item: PlaylistItemVideo) -> bool:
@@ -469,21 +461,41 @@ class YoutubeService:
         Returns:
             True if the video is private, False otherwise
         """
-        title = item.snippet.title
-        description = item.snippet.description or ""
+        snippet = item.snippet
+        return (
+            snippet.title == PRIVATE_VIDEO_TITLE
+            or (snippet.description or "") == PRIVATE_VIDEO_DESCRIPTION
+        )
 
-        # Check by title and description using constants
-        is_private_by_title = title == PRIVATE_VIDEO_TITLE
-        is_private_by_description = description == PRIVATE_VIDEO_DESCRIPTION
+    def _should_delete_item(
+        self,
+        item: PlaylistItemVideo,
+        include_private_videos: bool,
+        include_delete_videos: bool,
+    ) -> bool:
+        """
+        Determine if a playlist item should be deleted based on filters.
 
-        return is_private_by_title or is_private_by_description
+        Args:
+            item: Playlist item to evaluate
+            include_private_videos: If True, include private videos
+            include_delete_videos: If True, include deleted videos
 
-    def _private_or_deleted_items_for_deletion(
+        Returns:
+            True if item should be deleted, False otherwise
+        """
+        is_deleted = self._is_deleted_video(item)
+        is_private = self._is_private_video(item)
+
+        return (is_deleted and include_delete_videos) or (
+            is_private and include_private_videos
+        )
+
+    def _filter_items_for_deletion(
         self,
         all_items: list[PlaylistItemVideo],
         include_private_videos: bool,
         include_delete_videos: bool,
-        video_ids: list[str] | None = None,
     ) -> list[str]:
         """
         Filter playlist items to determine which should be deleted.
@@ -492,44 +504,44 @@ class YoutubeService:
             all_items: List of all playlist items as PlaylistItemVideo objects
             include_private_videos: If True, include private videos in deletion
             include_delete_videos: If True, include deleted videos in deletion
-            video_ids: Optional list of specific video IDs to delete.
-                      If provided, only these videos will be deleted (other flags are ignored)
 
         Returns:
             List of playlist item IDs to delete
         """
-        items_to_delete = []
+        return [
+            item.id
+            for item in all_items
+            if self._should_delete_item(
+                item, include_private_videos, include_delete_videos
+            )
+        ]
 
-        for item in all_items:
-            item_id = item.id
-            video_id = item.contentDetails.videoId
+    async def _delete_playlist_item(self, playlist_id: str, item_id: str) -> bool:
+        """
+        Delete a single playlist item.
 
-            # If specific video_ids provided, only delete those
-            if video_ids:
-                if video_id in video_ids:
-                    items_to_delete.append(item_id)
-                continue
+        Args:
+            playlist_id: ID of the playlist
+            item_id: Playlist item ID to delete
 
-            # Check if video is deleted or private using helper methods
-            is_deleted = self._is_deleted_video(item)
-            is_private = self._is_private_video(item)
-
-            # Apply filters
-            should_delete = False
-
-            if is_deleted and include_delete_videos:
-                should_delete = True
-            elif is_private and include_private_videos:
-                should_delete = True
-
-            if should_delete:
-                items_to_delete.append(item_id)
-
-        return items_to_delete
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            await self._execute_youtube_request(
+                lambda: self._youtube_client.playlistItems().delete(id=item_id)
+            )
+            logger.info(f"Deleted playlist item {item_id} from playlist {playlist_id}")
+            return True
+        except Exception as e:
+            logger.warning(
+                f"Failed to delete playlist item {item_id} from playlist {playlist_id}: {e}"
+            )
+            return False
 
     async def _delete_items_batch(self, playlist_id: str, item_ids: list[str]) -> int:
         """
-        Delete playlist items in batch.
+        Delete playlist items in batch (concurrently).
 
         Args:
             playlist_id: ID of the playlist
@@ -538,30 +550,24 @@ class YoutubeService:
         Returns:
             Number of successfully deleted items
         """
-        deleted_count = 0
-        for item_id in item_ids:
-            try:
-                await self._execute_youtube_request(
-                    lambda: self._youtube_client.playlistItems().delete(id=item_id)
-                )
-                deleted_count += 1
-                logger.info(
-                    f"Deleted playlist item {item_id} from playlist {playlist_id}"
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to delete playlist item {item_id} from playlist {playlist_id}: {e}"
-                )
-                # Continue with other deletions even if one fails
+        if not item_ids:
+            return 0
 
-        return deleted_count
+        # Delete items concurrently
+        tasks = [
+            self._delete_playlist_item(playlist_id, item_id) for item_id in item_ids
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Count successful deletions (True values, ignoring exceptions)
+        return sum(1 for result in results if result is True)
 
     async def delete_playlist_videos(
         self,
         playlist_id: str,
         include_private_videos: bool,
         include_delete_videos: bool,
-        video_ids: list[str] = [],
+        item_ids: list[str] | None = None,
     ) -> None:
         """
         Delete videos from a playlist.
@@ -571,27 +577,31 @@ class YoutubeService:
             playlist_id: ID of the playlist
             include_private_videos: If True, include private videos in deletion
             include_delete_videos: If True, include deleted videos in deletion
-            video_ids: Optional list of specific video IDs to delete. If provided,
-                      only these videos will be deleted (other flags are ignored)
+            item_ids: Optional list of playlist item IDs to delete. If provided,
+                     these items will be deleted in addition to any filtered items
         """
         self._ensure_initialized()
 
-        # Otherwise, filter by private/deleted if flags are set
+        # Determine which items to delete
+        items_to_delete: list[str] = []
+
+        if item_ids:
+            # If specific item IDs provided, use them directly
+            items_to_delete.extend(item_ids)
+
         if include_private_videos or include_delete_videos:
-            # Fetch all playlist items
+            # Filter by private/deleted status
             all_items = await self._fetch_all_playlist_pages(playlist_id)
-
-            # Filter items to delete
-            items_to_delete = self._private_or_deleted_items_for_deletion(
-                all_items, include_private_videos, include_delete_videos, None
+            filtered_items = self._filter_items_for_deletion(
+                all_items, include_private_videos, include_delete_videos
             )
-            video_ids.extend(items_to_delete)
+            items_to_delete.extend(filtered_items)
 
-        # Delete items
-        if len(video_ids) > 0:
-            deleted_count = await self._delete_items_batch(playlist_id, video_ids)
+        # Delete items if any
+        if items_to_delete:
+            deleted_count = await self._delete_items_batch(playlist_id, items_to_delete)
             logger.info(
-                f"Deleted {deleted_count} out of {len(video_ids)} items from playlist {playlist_id}"
+                f"Deleted {deleted_count} out of {len(items_to_delete)} items from playlist {playlist_id}"
             )
 
         # INFRASTRUCTURE: Invalidate cache for this playlist

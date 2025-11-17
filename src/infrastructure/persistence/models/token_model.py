@@ -1,6 +1,6 @@
 """Token persistence model for DynamoDB."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Dict, Any, Literal, Self
 from uuid import uuid4
 
@@ -75,4 +75,9 @@ class TokenModel:
 
     def to_item(self) -> Dict[str, Any]:
         """Convert model to DynamoDB item format."""
-        return {k: v for k, v in self.__dict__.items() if v is not None}
+        # Use dataclasses.fields() instead of __dict__ because slots=True
+        return {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+            if getattr(self, field.name) is not None
+        }

@@ -26,11 +26,13 @@ class BaseRepository(ABC, Generic[T]):
 
     def __init__(self, table_name: str | None = None) -> None:
         self.table_name = table_name or config.table_name
+        # Build resource with endpoint_url for local DynamoDB if configured
         self._dynamodb = boto3.resource(
             "dynamodb",
             region_name=config.aws_region,
             aws_access_key_id=config.aws_access_key_id,
             aws_secret_access_key=config.aws_secret_access_key,
+            endpoint_url=config.dynamodb_endpoint,
         )
         self.table = self._dynamodb.Table(self.table_name)
 

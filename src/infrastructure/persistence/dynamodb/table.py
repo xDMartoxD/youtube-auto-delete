@@ -68,17 +68,28 @@ table_def: CreateTableInputServiceResourceCreateTableTypeDef = {
 def ensure_table() -> None:
     """Crea la tabla si no existe, usando configuración desde config."""
     table_name = table_def["TableName"]
+    logger.info(
+        "🔍 Verificando tabla DynamoDB: '%s' en endpoint: %s",
+        table_name,
+        config.dynamodb_endpoint or "AWS default",
+    )
     try:
         table = dynamodb.Table(table_name)
         table.load()
-        logger.info("Tabla '%s' ya existe.", table_name)
+        logger.info("✅ Tabla '%s' ya existe.", table_name)
     except ClientError as e:
         error_code = e.response.get("Error", {}).get("Code")
         if error_code == "ResourceNotFoundException":
             logger.info("⚙️  Creando tabla '%s'...", table_name)
-            table = dynamodb.create_table(**table_def)
-            table.wait_until_exists()
-            logger.info("✅ Tabla '%s' creada correctamente.", table.name)
+            try:
+                table = dynamodb.create_table(**table_def)
+                table.wait_until_exists()
+                logger.info("✅ Tabla '%s' creada correctamente.", table.name)
+            except Exception as create_error:
+                logger.exception(
+                    "❌ Error al crear la tabla '%s': %s", table_name, create_error
+                )
+                raise
         else:
-            logger.exception("Error comprobando/creando la tabla '%s'", table_name)
+            logger.exception("❌ Error comprobando/creando la tabla '%s': %s", table_name, e)
             raise

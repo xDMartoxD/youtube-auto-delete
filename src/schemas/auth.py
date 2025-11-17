@@ -19,7 +19,7 @@ class GoogleCodeLogin(BaseModel):
 
 
 class UserInfo(BaseModel):
-    """Información del usuario autenticado."""
+    """Authenticated user information."""
 
     sub: str
     email: str
@@ -28,7 +28,7 @@ class UserInfo(BaseModel):
 
 
 class AuthSuccessResponse(BaseModel):
-    """Respuesta exitosa de autenticación."""
+    """Successful authentication response."""
 
     message: str
     user: UserInfo
@@ -36,7 +36,7 @@ class AuthSuccessResponse(BaseModel):
 
 
 class GoogleUserInfo(BaseModel):
-    """Respuesta directa de Google UserInfo API."""
+    """Direct response from Google UserInfo API."""
 
     id: str
     email: str
@@ -70,12 +70,12 @@ class GoogleUserResponse(BaseModel):
     def from_user_info(
         cls, user_info: GoogleUserInfo, iss: str, aud: str, iat: int, exp: int
     ) -> "GoogleUserResponse":
-        """Convierte GoogleUserInfo a GoogleUserResponse usando id como sub."""
+        """Converts GoogleUserInfo to GoogleUserResponse using id as sub."""
         return cls(
             iss=iss,
-            azp=aud,  # Usar aud como azp
+            azp=aud,  # Use aud as azp
             aud=aud,
-            sub=user_info.id,  # id se convierte en sub
+            sub=user_info.id,  # id is converted to sub
             email=user_info.email,
             email_verified=user_info.verified_email,
             name=user_info.name,
@@ -105,7 +105,7 @@ class SessionCookieData(BaseModel):
 
 
 class SessionValidation(TypedDict):
-    """TypedDict para respuesta exitosa de validación de sesión."""
+    """TypedDict for successful session validation response."""
 
     authenticated: bool
     user_sub: str

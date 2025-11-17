@@ -41,7 +41,7 @@ class CookieSecurity(HTTPBearer):
         return HTTPAuthorizationCredentials(scheme="Cookie", credentials=session_token)
 
 
-# Security scheme para documentación
+# Security scheme for documentation
 cookie_security = CookieSecurity()
 
 
@@ -51,7 +51,7 @@ def _get_user_repository() -> DynamoDBUserRepository:
 
 
 def _get_google_client(request: Request) -> GoogleClient:
-    # Devuelve la instancia única creada en lifespan (request.app.state)
+    # Returns the unique instance created in lifespan (request.app.state)
     return request.app.state.google_client
 
 
@@ -59,8 +59,8 @@ def get_auth_service(
     user_repo: DynamoDBUserRepository = Depends(_get_user_repository),
     google_client: GoogleClient = Depends(_get_google_client),
 ) -> Generator[AuthService, None, None]:
-    """Dependency para crear AuthService con inyección de dominio e infraestructura."""
-    # Crear instancias de servicios de dominio e infraestructura
+    """Dependency to create AuthService with domain and infrastructure injection."""
+    # Create instances of domain and infrastructure services
     session_service = SessionService()
     jwt_service = JWTService()
 
@@ -93,7 +93,7 @@ async def get_current_session(
     try:
         yield session
     finally:
-        # Actualizar cookie SOLO después de que el endpoint termine exitosamente
+        # Update cookie ONLY after endpoint completes successfully
         if (
             session["token_refreshed"]
             and session["new_session_token"]
@@ -141,7 +141,7 @@ def get_suggestions_service(
         _get_suggestions_repository
     ),
 ) -> Generator[SuggestionsService, None, None]:
-    """Dependency para crear SuggestionsService con inyección de dominio."""
+    """Dependency to create SuggestionsService with domain injection."""
     suggestion_service = SuggestionService()
 
     svc = SuggestionsService(

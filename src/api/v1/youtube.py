@@ -63,6 +63,12 @@ async def delete_playlist_videos(
         DeletePlaylistVideosRequest, Body(media_type="application/json")
     ],
     youtube_service: youtube_service_dependency,
-    session: current_session_dependency,
 ) -> None:
-    pass
+
+    await youtube_service.delete_playlist_videos(
+        playlist_id,
+        request.include_private_videos,
+        request.include_delete_videos,
+        request.video_ids,
+    )
+    return None

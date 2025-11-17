@@ -1,0 +1,2 @@
+"""Domain aggregates unit tests."""
+

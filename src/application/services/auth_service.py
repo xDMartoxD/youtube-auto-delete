@@ -4,6 +4,10 @@ import time
 import logging
 from datetime import datetime, timezone
 
+import httpx
+from pydantic import ValidationError
+from googleapiclient.errors import HttpError
+
 from src.core.config import config
 from src.infrastructure.services.cache_service import CacheService
 from src.core.exceptions import (
@@ -58,14 +62,14 @@ class AuthService:
         Returns user data, session token, and refresh_expires_at.
         """
         try:
-            # INFRAESTRUCTURA: Exchange code with Google
+            # INFRASTRUCTURE: Exchange code with Google
             auth_response = await self.client.exchange_code(code, redirect_uri)
             user_response = await self.client.decode_id_token(auth_response.id_token)
 
-            # INFRAESTRUCTURA: Create TokenModel for persistence
+            # INFRASTRUCTURE: Create TokenModel for persistence
             token_model = TokenModel.from_dto(auth_response, user_response)
 
-            # DOMINIO: Create UserAggregate
+            # DOMAIN: Create UserAggregate
             user = UserAggregate.create(
                 user_id=user_response.sub,
                 email=user_response.email,
@@ -73,7 +77,7 @@ class AuthService:
                 picture=user_response.picture,
             )
 
-            # DOMINIO: Create session in aggregate
+            # DOMAIN: Create session in aggregate
             session = user.create_session(
                 access_token=token_model.access_token,
                 refresh_token=token_model.refresh_token,
@@ -81,17 +85,17 @@ class AuthService:
                 refresh_expires_at=token_model.refresh_expires_at,
             )
 
-            # INFRAESTRUCTURA: Save to database
+            # INFRASTRUCTURE: Save to database
             # Insert TokenModel using the user repository
             await self.user_repo.insert_token_model(token_model)
 
-            # INFRAESTRUCTURA: Generate session token
+            # INFRASTRUCTURE: Generate session token
             session_token = self.jwt_service.encode(
                 user_id=user.user_id,
                 expires_at=token_model.refresh_expires_at,
             )
 
-            # DOMINIO: Raise domain event
+            # DOMAIN: Raise domain event
             # (In a full implementation, we'd use an event bus)
             event = UserAuthenticated(
                 user_id=user.user_id,
@@ -102,14 +106,23 @@ class AuthService:
 
             return user_response, session_token, token_model.refresh_expires_at
 
+        except (AuthenticationFailedError, ValueError) as e:
+            logger.error(f"exchange_code failed: {e}")
+            raise
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            logger.error(f"HTTP error in exchange_code: {e}")
+            raise AuthenticationFailedError(message="Failed to communicate with Google API") from e
+        except ValidationError as e:
+            logger.error(f"Validation error in exchange_code: {e}")
+            raise AuthenticationFailedError(message="Invalid response from Google API") from e
         except Exception as e:
-            logger.exception("exchange_code failed")
+            logger.exception("Unexpected error in exchange_code")
             raise YoutubeAutoDeleteApiError() from e
 
     def get_session_cookie_data(
         self, session_token: str, expires_at: int
     ) -> SessionCookieData:
-        """Retorna los datos necesarios para crear la cookie de sesión."""
+        """Returns the data needed to create the session cookie."""
         current_time = int(time.time())
         max_age = max(0, expires_at - current_time)
 
@@ -127,7 +140,7 @@ class AuthService:
         """Get user profile from Google."""
         async def _fetch_profile() -> GoogleUserResponse:
             """Fetch user profile from Google."""
-            # INFRAESTRUCTURA: Get user info from Google
+            # INFRASTRUCTURE: Get user info from Google
             user_info_data = await self.client.get_user_info(access_token)
 
             # Convert GoogleUserInfo to GoogleUserResponse
@@ -136,10 +149,10 @@ class AuthService:
                 iss="https://accounts.google.com",
                 aud=str(config.google_client_id) if config.google_client_id else "google",
                 iat=int(time.time()),
-                exp=int(time.time()) + 3600,  # 1 hora
+                exp=int(time.time()) + 3600,  # 1 hour
             )
 
-        # INFRAESTRUCTURA: Get from cache or fetch
+        # INFRASTRUCTURE: Get from cache or fetch
         cached_result = await self.cache_service.get("user_profile", access_token)
         
         if cached_result:
@@ -150,7 +163,7 @@ class AuthService:
         await self.cache_service.set(
             "user_profile",
             result.model_dump(),
-            expire=3600,  # 1 hora
+            expire=config.cache_ttl_user_profile,
             access_token=access_token,
         )
         
@@ -159,18 +172,18 @@ class AuthService:
     async def validate_and_refresh_session(
         self, session_token: str
     ) -> SessionValidation:
-        """Valida el token de sesión y refresca el access token si es necesario."""
+        """Validates the session token and refreshes the access token if necessary."""
         try:
-            # INFRAESTRUCTURA: Decode JWT
+            # INFRASTRUCTURE: Decode JWT
             payload = self.jwt_service.decode(session_token)
             user_sub, session_id = payload["sub"], payload["jti"]
 
-            # INFRAESTRUCTURA: Get user aggregate from repository
+            # INFRASTRUCTURE: Get user aggregate from repository
             user = await self.user_repo.find_by_id(user_sub)
             if not user:
                 raise AuthenticationFailedError(message="User not found")
 
-            # INFRAESTRUCTURA: Get token data for updates (if repository supports it)
+            # INFRASTRUCTURE: Get token data for updates (if repository supports it)
             token_data = None
             if hasattr(self.user_repo, "get_token_by_sub"):
                 token_data = await self.user_repo.get_token_by_sub(user_sub)  # type: ignore
@@ -178,7 +191,7 @@ class AuthService:
             if not user.session:
                 raise AuthenticationFailedError(message="No active session")
 
-            # DOMINIO: Use domain service to check if refresh is needed
+            # DOMAIN: Use domain service to check if refresh is needed
             if self.session_service.should_refresh_token(user.session):
                 return await self._refresh_token_and_return(user, token_data)
             else:
@@ -186,20 +199,26 @@ class AuthService:
 
         except AuthenticationFailedError:
             raise
+        except ValueError as e:
+            logger.error(f"Value error in session validation: {e}")
+            raise AuthenticationFailedError(message="Invalid session token") from e
+        except KeyError as e:
+            logger.error(f"Missing key in session validation: {e}")
+            raise AuthenticationFailedError(message="Invalid session token format") from e
         except Exception as e:
-            logger.error(f"Error in session validation: {str(e)}")
-            raise AuthenticationFailedError(message="Authentication error")
+            logger.error(f"Unexpected error in session validation: {e}")
+            raise AuthenticationFailedError(message="Authentication error") from e
 
     async def _refresh_token_and_return(
         self, user: UserAggregate, token_data: TokenModel | None
     ) -> SessionValidation:
-        """Refresca el token y retorna los datos actualizados."""
+        """Refreshes the token and returns updated data."""
         if not user.session:
             raise AuthenticationFailedError(message="No active session")
 
         current_time = datetime.now(timezone.utc)
 
-        # DOMINIO: Check if session is fully expired
+        # DOMAIN: Check if session is fully expired
         if self.session_service.is_session_expired(user.session, current_time):
             logger.error(
                 f"Both access and refresh tokens expired for user: {user.user_id}"
@@ -211,16 +230,16 @@ class AuthService:
         try:
             logger.info(f"Access token expired for user: {user.user_id}, refreshing...")
 
-            # INFRAESTRUCTURA: Refresh token with Google
+            # INFRASTRUCTURE: Refresh token with Google
             refresh_response = await self.client.refresh_access_token(
                 user.session.refresh_token
             )
 
-            # DOMINIO: Update session in aggregate
+            # DOMAIN: Update session in aggregate
             new_expires_at = int(time.time()) + refresh_response.expires_in
             user.refresh_session(refresh_response.access_token, new_expires_at)
 
-            # INFRAESTRUCTURA: Update in database
+            # INFRASTRUCTURE: Update in database
             if token_data and hasattr(self.user_repo, "update_token"):
                 update_data = {
                     "access_token": refresh_response.access_token,
@@ -229,7 +248,7 @@ class AuthService:
                 }
                 await self.user_repo.update_token(user.user_id, update_data)  # type: ignore
 
-            # INFRAESTRUCTURA: Generate new session token
+            # INFRASTRUCTURE: Generate new session token
             new_refresh_expires_at = (
                 int(time.time()) + refresh_response.refresh_token_expires_in
             )
@@ -241,7 +260,7 @@ class AuthService:
 
             logger.info(f"Successfully refreshed access token for user: {user.user_id}")
 
-            # DOMINIO: Raise domain event
+            # DOMAIN: Raise domain event
             event = SessionRefreshed(
                 user_id=user.user_id,
                 session_id=user.session.session_id or "",
@@ -258,14 +277,22 @@ class AuthService:
                 "refresh_expires_at": new_refresh_expires_at,
             }
 
+        except AuthenticationFailedError:
+            raise
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            logger.error(f"HTTP error refreshing token for user {user.user_id}: {e}")
+            raise AuthenticationFailedError(message="Failed to communicate with Google API") from e
+        except ValidationError as e:
+            logger.error(f"Validation error refreshing token for user {user.user_id}: {e}")
+            raise AuthenticationFailedError(message="Invalid response from Google API") from e
         except Exception as e:
-            logger.error(f"Failed to refresh token for user {user.user_id}: {str(e)}")
-            raise AuthenticationFailedError(message="Failed to refresh access token")
+            logger.error(f"Unexpected error refreshing token for user {user.user_id}: {e}")
+            raise AuthenticationFailedError(message="Failed to refresh access token") from e
 
     def _return_current_token(
         self, session: Session, user_sub: str, session_id: str
     ) -> SessionValidation:
-        """Retorna los datos del token actual sin refresh."""
+        """Returns current token data without refresh."""
         return {
             "authenticated": True,
             "user_sub": user_sub,
@@ -277,16 +304,19 @@ class AuthService:
         }
 
     async def logout(self, session: SessionValidation) -> None:
-        """Cierra la sesión del usuario."""
+        """Closes the user's session."""
         try:
-            # INFRAESTRUCTURA: Delete token from database
+            # INFRASTRUCTURE: Delete token from database
             if hasattr(self.user_repo, "delete_token"):
                 await self.user_repo.delete_token(session["user_sub"])  # type: ignore
             else:
                 await self.user_repo.delete(session["user_sub"])
 
-            # INFRAESTRUCTURA: Revoke token with Google
+            # INFRASTRUCTURE: Revoke token with Google
             await self.client.revoke_access_token(session["access_token"])
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            logger.warning(f"HTTP error revoking token for user {session['user_sub']}: {e}")
+            # Continue with logout even if revoke fails
         except Exception as e:
-            logger.error(f"Failed to logout user: {session['user_sub']}: {str(e)}")
-            raise LogoutFailedError()
+            logger.error(f"Failed to logout user {session['user_sub']}: {e}")
+            raise LogoutFailedError() from e

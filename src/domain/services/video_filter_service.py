@@ -7,7 +7,7 @@ from src.domain.value_objects.date_range import DateRange
 
 
 class VideoFilterService:
-    """Servicio de dominio - contiene SOLO lógica de negocio para filtrado de videos."""
+    """Domain service - contains ONLY business logic for video filtering."""
 
     def filter_by_date_range(
         self,
@@ -16,21 +16,21 @@ class VideoFilterService:
         date_to: datetime | None,
     ) -> list[dict[str, Any]]:
         """
-        Filtra items de playlist por rango de fechas.
-        Filtra por fecha de agregado a la playlist (snippet.publishedAt).
+        Filters playlist items by date range.
+        Filters by date added to playlist (snippet.publishedAt).
 
-        Regla de negocio: Si un item no tiene fecha de publicación, se excluye.
+        Business rule: If an item has no publication date, exclude it.
         """
         if not date_from and not date_to:
             return items
 
-        # Crear DateRange value object si ambas fechas están presentes
+        # Create DateRange value object if both dates are present
         date_range = None
         if date_from and date_to:
             try:
                 date_range = DateRange(date_from=date_from, date_to=date_to)
             except ValueError:
-                # Si el rango es inválido, retornar lista vacía
+                # If range is invalid, return empty list
                 return []
 
         filtered_items = []
@@ -49,8 +49,8 @@ class VideoFilterService:
         date_to: datetime | None,
     ) -> bool:
         """
-        Determina si un item debe ser incluido según el rango de fechas.
-        Regla de negocio: Si no hay filtro de fechas, siempre incluir.
+        Determines if an item should be included based on date range.
+        Business rule: If there's no date filter, always include.
         """
         if not date_from and not date_to:
             return True
@@ -59,7 +59,7 @@ class VideoFilterService:
         published_at_str = snippet.get("publishedAt")
 
         if not published_at_str:
-            # Regla de negocio: Si no tiene fecha de publicación, excluir
+            # Business rule: If no publication date, exclude
             return False
 
         try:
@@ -69,14 +69,14 @@ class VideoFilterService:
             if published_at.tzinfo is None:
                 published_at = published_at.replace(tzinfo=timezone.utc)
         except (ValueError, AttributeError):
-            # Si no se puede parsear la fecha, excluir
+            # If date cannot be parsed, exclude
             return False
 
-        # Usar DateRange si está disponible, sino validar manualmente
+        # Use DateRange if available, otherwise validate manually
         if date_range:
             return date_range.contains(published_at)
 
-        # Validación manual si no hay DateRange completo
+        # Manual validation if no complete DateRange
         if date_from:
             date_from_utc = date_from
             if date_from_utc.tzinfo is None:

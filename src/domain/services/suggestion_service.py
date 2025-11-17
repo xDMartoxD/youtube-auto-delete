@@ -5,14 +5,14 @@ from src.domain.exceptions.domain_exceptions import SuggestionNotFoundDomainExce
 
 
 class SuggestionService:
-    """Servicio de dominio - contiene SOLO lógica de negocio para sugerencias."""
+    """Domain service - contains ONLY business logic for suggestions."""
 
     def validate_suggestion_exists(
         self, suggestion: Suggestion | None
     ) -> Suggestion:
         """
-        Valida que una sugerencia exista.
-        Lanza SuggestionNotFoundDomainException si no existe.
+        Validates that a suggestion exists.
+        Raises SuggestionNotFoundDomainException if it doesn't exist.
         """
         if suggestion is None:
             raise SuggestionNotFoundDomainException("Suggestion not found")
@@ -20,15 +20,15 @@ class SuggestionService:
 
     def can_update(self, suggestion: Suggestion) -> bool:
         """
-        Verifica si una sugerencia puede ser actualizada.
-        Regla de negocio: todas las sugerencias pueden ser actualizadas.
+        Checks if a suggestion can be updated.
+        Business rule: all suggestions can be updated.
         """
         return True
 
     def can_delete(self, suggestion: Suggestion) -> bool:
         """
-        Verifica si una sugerencia puede ser eliminada.
-        Regla de negocio: todas las sugerencias pueden ser eliminadas.
+        Checks if a suggestion can be deleted.
+        Business rule: all suggestions can be deleted.
         """
         return True
 

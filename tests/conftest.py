@@ -9,9 +9,8 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock
 
 from src.main import create_app
-from src.domain.services.google_client import GoogleClient
-from src.db.repositories.auth import AuthRepository
-from src.db.repositories.user import UserRepository
+from src.infrastructure.external_services.google_client import GoogleClient
+from src.infrastructure.repositories.dynamodb_user_repository import DynamoDBUserRepository
 
 
 @pytest.fixture(scope="session")
@@ -42,16 +41,9 @@ def mock_google_client() -> AsyncMock:
 
 
 @pytest.fixture
-def mock_auth_repository() -> AsyncMock:
-    """Mock del AuthRepository para tests."""
-    repo = AsyncMock(spec=AuthRepository)
-    return repo
-
-
-@pytest.fixture
 def mock_user_repository() -> AsyncMock:
-    """Mock del UserRepository para tests."""
-    repo = AsyncMock(spec=UserRepository)
+    """Mock del DynamoDBUserRepository para tests."""
+    repo = AsyncMock(spec=DynamoDBUserRepository)
     return repo
 
 
@@ -84,4 +76,19 @@ def sample_google_user_response():
         "azp": "test_client_id",
         "iat": 1234567890,
         "exp": 1234571490,
+    }
+
+
+@pytest.fixture
+def sample_session_validation():
+    """Fixture para SessionValidation."""
+    from datetime import datetime, timezone
+    return {
+        "authenticated": True,
+        "user_sub": "test_user_sub",
+        "session_id": "test_session_id",
+        "access_token": "test_access_token",
+        "token_refreshed": False,
+        "new_session_token": None,
+        "refresh_expires_at": int(datetime.now(timezone.utc).timestamp()) + 3600,
     }

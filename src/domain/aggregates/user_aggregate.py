@@ -10,10 +10,10 @@ from src.domain.value_objects.email import Email
 @dataclass(slots=True, frozen=False)
 class UserAggregate:
     """
-    Agregado que encapsula User y Session.
-    Garantiza invariantes de negocio:
-    - Un usuario solo puede tener una sesión activa
-    - La sesión debe estar asociada al usuario correcto
+    Aggregate that encapsulates User and Session.
+    Ensures business invariants:
+    - A user can only have one active session
+    - The session must be associated with the correct user
     """
 
     user_id: str
@@ -49,8 +49,8 @@ class UserAggregate:
         session_id: str | None = None,
     ) -> Session:
         """
-        Crea una nueva sesión para el usuario.
-        Invariante: Si ya existe una sesión, la reemplaza.
+        Create a new session for the user.
+        Invariant: If a session already exists, it is replaced.
         """
         self.session = Session.create(
             user_id=self.user_id,
@@ -64,8 +64,8 @@ class UserAggregate:
 
     def refresh_session(self, new_access_token: str, new_expires_at: int) -> None:
         """
-        Refresca la sesión del usuario.
-        Invariante: Solo se puede refrescar si la sesión existe y es válida.
+        Refresh the user's session.
+        Invariant: Can only refresh if session exists and is valid.
         """
         if not self.session:
             raise ValueError("Cannot refresh: no active session")
@@ -75,7 +75,7 @@ class UserAggregate:
         self.session.update_access_token(new_access_token, new_expires_at)
 
     def end_session(self) -> None:
-        """Termina la sesión del usuario."""
+        """End the user's session."""
         self.session = None
 
     def has_active_session(self) -> bool:
@@ -87,4 +87,3 @@ class UserAggregate:
         if not self.session:
             raise ValueError("User has no active session")
         return self.session
-

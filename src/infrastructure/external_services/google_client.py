@@ -67,12 +67,12 @@ class GoogleClient:
 
         try:
             # verify_oauth2_token is synchronous but safe to call from async function
-            # Agregar tolerancia de tiempo para manejar diferencias de reloj
+            # Add time tolerance to handle clock differences
             payload = id_token.verify_oauth2_token(
                 token,
                 google_requests.Request(),
                 client_id,
-                clock_skew_in_seconds=60,  # Tolerancia de 60 segundos
+                clock_skew_in_seconds=60,  # 60 seconds tolerance
             )
             return GoogleUserResponse.model_validate(payload)
         except ValidationError as e:
@@ -82,7 +82,7 @@ class GoogleClient:
 
     async def get_user_info(self, access_token: str) -> GoogleUserInfo:
         """
-        Obtiene la información del usuario de Google utilizando la librería oficial de la API de Google.
+        Get user information from Google using the official Google API library.
         """
 
         try:
@@ -125,7 +125,7 @@ class GoogleClient:
 
     async def revoke_access_token(self, access_token: str) -> None:
         """
-        Revoca un access token.
+        Revoke an access token.
         """
         try:
             creds = Credentials(token=access_token)

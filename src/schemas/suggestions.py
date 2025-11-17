@@ -3,40 +3,40 @@ from datetime import datetime
 
 
 class SuggestionCreate(BaseModel):
-    """Schema para crear una sugerencia."""
+    """Schema for creating a suggestion."""
 
-    title: str = Field(..., description="Título de la sugerencia", min_length=1, max_length=200)
-    description: str = Field(..., description="Descripción de la sugerencia", min_length=1, max_length=1000)
+    title: str = Field(..., description="Suggestion title", min_length=1, max_length=200)
+    description: str = Field(..., description="Suggestion description", min_length=1, max_length=1000)
 
     model_config = {"extra": "forbid"}
 
 
 class SuggestionUpdate(BaseModel):
-    """Schema para actualizar una sugerencia."""
+    """Schema for updating a suggestion."""
 
-    title: str | None = Field(None, description="Título de la sugerencia", min_length=1, max_length=200)
-    description: str | None = Field(None, description="Descripción de la sugerencia", min_length=1, max_length=1000)
+    title: str | None = Field(None, description="Suggestion title", min_length=1, max_length=200)
+    description: str | None = Field(None, description="Suggestion description", min_length=1, max_length=1000)
 
     model_config = {"extra": "forbid"}
 
 
 class SuggestionResponse(BaseModel):
-    """Schema de respuesta para una sugerencia."""
+    """Response schema for a suggestion."""
 
-    id: str = Field(..., description="ID único de la sugerencia")
-    title: str = Field(..., description="Título de la sugerencia")
-    description: str = Field(..., description="Descripción de la sugerencia")
-    created_at: datetime = Field(..., description="Fecha de creación")
-    updated_at: datetime = Field(..., description="Fecha de última actualización")
+    id: str = Field(..., description="Unique suggestion ID")
+    title: str = Field(..., description="Suggestion title")
+    description: str = Field(..., description="Suggestion description")
+    created_at: datetime = Field(..., description="Creation date")
+    updated_at: datetime = Field(..., description="Last update date")
 
     model_config = {"extra": "forbid"}
 
 
 class SuggestionListResponse(BaseModel):
-    """Schema de respuesta para una lista de sugerencias."""
+    """Response schema for a list of suggestions."""
 
-    items: list[SuggestionResponse] = Field(..., description="Lista de sugerencias")
-    total: int = Field(..., description="Total de sugerencias")
+    items: list[SuggestionResponse] = Field(..., description="List of suggestions")
+    total: int = Field(..., description="Total suggestions")
 
     model_config = {"extra": "forbid"}
 

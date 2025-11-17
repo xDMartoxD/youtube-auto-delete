@@ -22,7 +22,7 @@ T = TypeVar("T")
 
 
 class BaseRepository(ABC, Generic[T]):
-    """Repositorio base con funcionalidades comunes para DynamoDB."""
+    """Base repository with common functionality for DynamoDB."""
 
     def __init__(self, table_name: str | None = None) -> None:
         self.table_name = table_name or config.table_name
@@ -35,11 +35,11 @@ class BaseRepository(ABC, Generic[T]):
         self.table = self._dynamodb.Table(self.table_name)
 
     async def insert(self, item: T) -> PutItemOutputTableTypeDef | None:
-        """Inserta un ítem de forma asíncrona."""
+        """Insert an item asynchronously."""
         payload = self._prepare_item(item)
 
         try:
-            # Ejecutar operación síncrona en thread para no bloquear
+            # Execute synchronous operation in thread to avoid blocking
             put_item_response = await asyncio.to_thread(
                 self.table.put_item, Item=payload
             )
@@ -55,7 +55,7 @@ class BaseRepository(ABC, Generic[T]):
             raise AwsFailedError("failed to put new item", "DynamoDB Failed") from e
 
     async def get_item(self, key: Dict[str, Any]) -> Dict[str, Any] | None:
-        """Obtiene un ítem por su clave primaria."""
+        """Get an item by its primary key."""
         try:
             response = await asyncio.to_thread(self.table.get_item, Key=key)
             return response.get("Item")
@@ -70,7 +70,7 @@ class BaseRepository(ABC, Generic[T]):
         expression_attribute_values: Dict[str, Any],
         expression_attribute_names: Dict[str, str] | None = None,
     ) -> UpdateItemOutputTableTypeDef:
-        """Actualiza un ítem existente."""
+        """Update an existing item."""
         try:
             kwargs = {
                 "Key": key,
@@ -89,7 +89,7 @@ class BaseRepository(ABC, Generic[T]):
             raise AwsFailedError("failed to update item", "DynamoDB Failed") from e
 
     async def delete_item(self, key: Dict[str, Any]) -> DeleteItemOutputTableTypeDef:
-        """Elimina un ítem por su clave primaria."""
+        """Delete an item by its primary key."""
         try:
             response = await asyncio.to_thread(self.table.delete_item, Key=key)
             return response
@@ -102,13 +102,13 @@ class BaseRepository(ABC, Generic[T]):
     @abstractmethod
     def _prepare_item(self, item: T) -> Dict[str, Any]:
         """
-        Prepara el ítem para ser insertado en DynamoDB.
-        Debe ser implementado por las clases hijas.
+        Prepare the item for insertion into DynamoDB.
+        Must be implemented by child classes.
         """
         pass
 
     async def batch_write(self, items: list[T]) -> Dict[str, Any] | None:
-        """Escribe múltiples ítems en lote."""
+        """Write multiple items in batch."""
         if not items:
             return None
 

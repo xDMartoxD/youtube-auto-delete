@@ -3,6 +3,9 @@ from datetime import datetime, timezone
 import asyncio
 import logging
 from typing import Dict, Any
+
+import botocore.exceptions
+
 from src.core.logging import get_logger
 
 logger = get_logger("health")
@@ -36,20 +39,29 @@ async def detailed_health_check():
         "checks": {},
     }
 
-    # Verificar DynamoDB
+    # Check DynamoDB
     try:
-        # Aquí podrías agregar una verificación real de DynamoDB
+        # Here you could add a real DynamoDB verification
         health_status["checks"]["dynamodb"] = {
             "status": "healthy",
             "message": "Connection successful",
         }
+    except (botocore.exceptions.ClientError, botocore.exceptions.BotoCoreError) as e:
+        health_status["checks"]["dynamodb"] = {
+            "status": "unhealthy",
+            "message": f"AWS/DynamoDB error: {str(e)}"
+        }
+        health_status["status"] = "unhealthy"
     except Exception as e:
-        health_status["checks"]["dynamodb"] = {"status": "unhealthy", "message": str(e)}
+        health_status["checks"]["dynamodb"] = {
+            "status": "unhealthy",
+            "message": f"Unexpected error: {str(e)}"
+        }
         health_status["status"] = "unhealthy"
 
-    # Verificar Google API
+    # Check Google API
     try:
-        # Aquí podrías agregar una verificación real de Google API
+        # Here you could add a real Google API verification
         health_status["checks"]["google_api"] = {
             "status": "healthy",
             "message": "Connection successful",
@@ -72,10 +84,10 @@ async def get_metrics():
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "metrics": {
-            "uptime": "N/A",  # En una implementación real, calcularías el uptime
-            "requests_total": "N/A",  # Contador de requests
-            "active_sessions": "N/A",  # Sesiones activas
-            "database_connections": "N/A",  # Conexiones a DB
+            "uptime": "N/A",  # In a real implementation, you would calculate uptime
+            "requests_total": "N/A",  # Request counter
+            "active_sessions": "N/A",  # Active sessions
+            "database_connections": "N/A",  # DB connections
         },
     }
 
@@ -86,8 +98,11 @@ async def readiness_check():
     Endpoint de readiness check para Kubernetes.
     """
     try:
-        # Verificaciones básicas de readiness
+        # Basic readiness checks
         return {"status": "ready", "timestamp": datetime.now(timezone.utc).isoformat()}
+    except (ValueError, KeyError) as e:
+        logger.error(f"Readiness check validation error: {e}")
+        raise HTTPException(status_code=503, detail="Service not ready") from e
     except Exception as e:
-        logger.error("Readiness check failed", extra={"error": str(e)})
-        raise HTTPException(status_code=503, detail="Service not ready")
+        logger.error(f"Readiness check failed: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Service not ready") from e

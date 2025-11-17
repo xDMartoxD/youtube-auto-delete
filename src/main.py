@@ -5,6 +5,8 @@ from logging import getLogger
 from src.core.logging import setup_logging
 from src.core.exceptions import register_exception_handlers
 from src.core.lifespan import lifespan
+from src.core.config import config
+from src.middlewares.rate_limit import RateLimitMiddleware
 from src.api.v1.auth import router as auth_router
 from src.api.v1.health import router as health_router
 from src.api.v1.youtube import router as youtube_router
@@ -20,24 +22,22 @@ def create_app() -> FastAPI:
     # Setup
     setup_logging()
 
-    # CORS Middleware - DEBE ir antes que los routers
+    # CORS Middleware - MUST be before routers
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:5173",  # Frontend de desarrollo
-            "http://localhost:3000",  # Frontend alternativo
-            "http://127.0.0.1:5173",  # Frontend local alternativo
-            "http://127.0.0.1:3000",  # Frontend local alternativo
-        ],
+        allow_origins=config.get_cors_origins(),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 
+    # Rate Limiting Middleware - must be after CORS but before routers
+    app.add_middleware(RateLimitMiddleware)
+
     # Register all exception handlers using the registry
     register_exception_handlers(app)
 
-    # Routers (usar prefijo /api para todos los routes)
+    # Routers (use /api prefix for all routes)
     API_PREFIX = "/api"
     app.include_router(auth_router, prefix=f"{API_PREFIX}/auth", tags=["auth"])
     app.include_router(health_router, prefix=f"{API_PREFIX}/health", tags=["health"])

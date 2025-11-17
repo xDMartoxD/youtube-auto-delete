@@ -8,40 +8,40 @@ from src.domain.aggregates.user_aggregate import UserAggregate
 
 class SessionService:
     """
-    Servicio de dominio - contiene SOLO lógica de negocio para sesiones.
-    NO sabe cómo se guarda en DB o cómo se llama a APIs.
+    Domain service - contains ONLY business logic for sessions.
+    Does NOT know how data is saved to DB or how APIs are called.
     """
 
     def should_refresh_token(
         self, session: Session, current_time: datetime | None = None
     ) -> bool:
         """
-        Decide si un token debe ser refrescado.
-        Regla de negocio: refrescar si el access token está expirado pero el refresh token no.
+        Decides if a token should be refreshed.
+        Business rule: refresh if access token is expired but refresh token is not.
         """
         if current_time is None:
             current_time = datetime.now(timezone.utc)
 
-        # Si el refresh token está expirado, no se puede refrescar
+        # If refresh token is expired, cannot refresh
         if session.is_fully_expired(current_time):
             return False
 
-        # Refrescar si el access token está expirado
+        # Refresh if access token is expired
         return session.needs_refresh(current_time)
 
     def is_session_expired(
         self, session: Session, current_time: datetime | None = None
     ) -> bool:
         """
-        Verifica si una sesión está completamente expirada.
-        Regla de negocio: ambos tokens deben estar expirados.
+        Checks if a session is completely expired.
+        Business rule: both tokens must be expired.
         """
         return session.is_fully_expired(current_time)
 
     def validate_session(self, session: Session) -> Session:
         """
-        Valida que una sesión sea válida.
-        Regla de negocio: la sesión debe tener refresh token válido.
+        Validates that a session is valid.
+        Business rule: session must have a valid refresh token.
         """
         if not session.is_valid():
             raise ValueError("Session is expired")
@@ -49,8 +49,8 @@ class SessionService:
 
     def can_refresh_session(self, user: UserAggregate) -> bool:
         """
-        Verifica si se puede refrescar la sesión de un usuario.
-        Regla de negocio: debe tener sesión activa y válida.
+        Checks if a user's session can be refreshed.
+        Business rule: must have an active and valid session.
         """
         if not user.has_active_session():
             return False

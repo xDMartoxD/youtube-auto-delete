@@ -11,14 +11,14 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app):
-    # Ejecutar la función síncrona en un hilo para no bloquear el loop
+    # Execute synchronous function in a thread to avoid blocking the event loop
     await asyncio.to_thread(ensure_table)
 
-    # Inicializar Google Client
+    # Initialize Google Client
     google_client = GoogleClient()
     app.state.google_client = google_client
 
-    # Inicializar Redis client
+    # Initialize Redis client
     logger.info("Attempting to connect to Redis...")
     try:
         redis_client = await get_redis_client()

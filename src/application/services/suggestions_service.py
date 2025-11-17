@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class SuggestionsService:
     """
     Application service - orchestrates domain and infrastructure.
-    NO contiene lógica de negocio, solo orquesta.
+    Does NOT contain business logic, only orchestrates.
     """
 
     def __init__(
@@ -33,7 +33,7 @@ class SuggestionsService:
         self.suggestion_service = suggestion_service or SuggestionService()
 
     def _to_response(self, suggestion: Suggestion) -> SuggestionResponse:
-        """Convierte una entidad de dominio a un schema de respuesta."""
+        """Converts a domain entity to a response schema."""
         return SuggestionResponse(
             id=suggestion.id,
             title=suggestion.title,
@@ -45,46 +45,46 @@ class SuggestionsService:
     async def create_suggestion(
         self, suggestion_data: SuggestionCreate
     ) -> SuggestionResponse:
-        """Crea una nueva sugerencia."""
-        # DOMINIO: Crear entidad
+        """Creates a new suggestion."""
+        # DOMAIN: Create entity
         suggestion = Suggestion.create(
             title=suggestion_data.title,
             description=suggestion_data.description,
         )
 
-        # INFRAESTRUCTURA: Guardar en base de datos
+        # INFRASTRUCTURE: Save to database
         await self.suggestion_repo.save(suggestion)
 
-        # DOMINIO: Raise domain event
+        # DOMAIN: Raise domain event
         event = SuggestionCreated(
             suggestion_id=suggestion.id,
             title=suggestion.title,
         )
         logger.info(f"Domain event: {event}")
 
-        logger.info(f"Sugerencia creada: {suggestion.id}")
+        logger.info(f"Suggestion created: {suggestion.id}")
         return self._to_response(suggestion)
 
     async def get_suggestion(self, suggestion_id: str) -> SuggestionResponse:
-        """Obtiene una sugerencia por su ID."""
-        # INFRAESTRUCTURA: Obtener de base de datos
+        """Gets a suggestion by its ID."""
+        # INFRASTRUCTURE: Get from database
         suggestion = await self.suggestion_repo.find_by_id(suggestion_id)
 
-        # DOMINIO: Validar que existe (puede lanzar SuggestionNotFoundDomainException)
+        # DOMAIN: Validate that it exists (may raise SuggestionNotFoundDomainException)
         try:
             suggestion = self.suggestion_service.validate_suggestion_exists(suggestion)
         except SuggestionNotFoundDomainException as e:
-            # Mapear excepción de dominio a excepción de aplicación
+            # Map domain exception to application exception
             raise SuggestionNotFoundError(
                 message=str(e.message),
-                user_message="Sugerencia no encontrada",
+                user_message="Suggestion not found",
             ) from e
 
         return self._to_response(suggestion)
 
     async def get_all_suggestions(self) -> SuggestionListResponse:
-        """Obtiene todas las sugerencias."""
-        # INFRAESTRUCTURA: Obtener de base de datos
+        """Gets all suggestions."""
+        # INFRASTRUCTURE: Get from database
         suggestions = await self.suggestion_repo.find_all()
 
         suggestion_responses = [self._to_response(s) for s in suggestions]
@@ -97,55 +97,55 @@ class SuggestionsService:
     async def update_suggestion(
         self, suggestion_id: str, suggestion_data: SuggestionUpdate
     ) -> SuggestionResponse:
-        """Actualiza una sugerencia."""
-        # INFRAESTRUCTURA: Obtener de base de datos
+        """Updates a suggestion."""
+        # INFRASTRUCTURE: Get from database
         suggestion = await self.suggestion_repo.find_by_id(suggestion_id)
 
-        # DOMINIO: Validar que existe (puede lanzar SuggestionNotFoundDomainException)
+        # DOMAIN: Validate that it exists (may raise SuggestionNotFoundDomainException)
         try:
             suggestion = self.suggestion_service.validate_suggestion_exists(suggestion)
         except SuggestionNotFoundDomainException as e:
-            # Mapear excepción de dominio a excepción de aplicación
+            # Map domain exception to application exception
             raise SuggestionNotFoundError(
                 message=str(e.message),
-                user_message="Sugerencia no encontrada",
+                user_message="Suggestion not found",
             ) from e
 
-        # DOMINIO: Validar que puede actualizarse
+        # DOMAIN: Validate that it can be updated
         if not self.suggestion_service.can_update(suggestion):
-            raise ValueError("La sugerencia no puede ser actualizada")
+            raise ValueError("Suggestion cannot be updated")
 
-        # DOMINIO: Actualizar entidad
+        # DOMAIN: Update entity
         if suggestion_data.title is not None or suggestion_data.description is not None:
             suggestion.update(
                 title=suggestion_data.title,
                 description=suggestion_data.description,
             )
 
-            # INFRAESTRUCTURA: Guardar cambios
+            # INFRASTRUCTURE: Save changes
             await self.suggestion_repo.save(suggestion)
 
-        logger.info(f"Sugerencia actualizada: {suggestion_id}")
+        logger.info(f"Suggestion updated: {suggestion_id}")
         return self._to_response(suggestion)
 
     async def delete_suggestion(self, suggestion_id: str) -> None:
-        """Elimina una sugerencia."""
-        # INFRAESTRUCTURA: Obtener de base de datos
+        """Deletes a suggestion."""
+        # INFRASTRUCTURE: Get from database
         suggestion = await self.suggestion_repo.find_by_id(suggestion_id)
 
-        # DOMINIO: Validar que existe y puede eliminarse (puede lanzar SuggestionNotFoundDomainException)
+        # DOMAIN: Validate that it exists and can be deleted (may raise SuggestionNotFoundDomainException)
         try:
             suggestion = self.suggestion_service.validate_suggestion_exists(suggestion)
         except SuggestionNotFoundDomainException as e:
-            # Mapear excepción de dominio a excepción de aplicación
+            # Map domain exception to application exception
             raise SuggestionNotFoundError(
                 message=str(e.message),
-                user_message="Sugerencia no encontrada",
+                user_message="Suggestion not found",
             ) from e
         if not self.suggestion_service.can_delete(suggestion):
-            raise ValueError("La sugerencia no puede ser eliminada")
+            raise ValueError("Suggestion cannot be deleted")
 
-        # INFRAESTRUCTURA: Eliminar de base de datos
+        # INFRASTRUCTURE: Delete from database
         await self.suggestion_repo.delete(suggestion_id)
-        logger.info(f"Sugerencia eliminada: {suggestion_id}")
+        logger.info(f"Suggestion deleted: {suggestion_id}")
 

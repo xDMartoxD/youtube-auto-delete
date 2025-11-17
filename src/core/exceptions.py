@@ -21,19 +21,19 @@ class YoutubeAutoDeleteApiError(Exception):
         super().__init__(self.message)
 
 
-# Registry para almacenar las excepciones y sus configuraciones
+# Registry to store exceptions and their configurations
 exception_registry: Dict[Type[YoutubeAutoDeleteApiError], tuple[int, str]] = {}
 
 
 def register_exception(
     status_code: int, message: str
 ) -> Callable[[Type[YoutubeAutoDeleteApiError]], Type[YoutubeAutoDeleteApiError]]:
-    """Decorator para registrar excepciones en el registry."""
+    """Decorator to register exceptions in the registry."""
 
     def decorator(
         exception_class: Type[YoutubeAutoDeleteApiError],
     ) -> Type[YoutubeAutoDeleteApiError]:
-        # Registrar la excepción en el registry
+        # Register the exception in the registry
         exception_registry[exception_class] = (status_code, message)
         return exception_class
 
@@ -43,7 +43,7 @@ def register_exception(
 def create_exception_handler(
     status_code: int, initial_detail: str
 ) -> Callable[[Request, Exception], Coroutine[Any, Any, JSONResponse]]:
-    """Crea un manejador de excepción genérico."""
+    """Creates a generic exception handler."""
 
     async def exception_handler(_: Request, exc: Exception) -> JSONResponse:
         # Start from the initial/default message
@@ -78,7 +78,7 @@ def create_exception_handler(
 
 
 def register_exception_handlers(app: FastAPI) -> None:
-    """Registra todos los manejadores de excepción usando el registry."""
+    """Registers all exception handlers using the registry."""
     for exception_class, (status_code, message) in exception_registry.items():
         app.add_exception_handler(
             exc_class_or_status_code=exception_class,
@@ -86,7 +86,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
 
-# Definir las excepciones con decorators
+# Define exceptions with decorators
 @register_exception(
     status.HTTP_401_UNAUTHORIZED, "The google account is not authorized"
 )
@@ -112,7 +112,7 @@ class InvalidDateRangeError(YoutubeAutoDeleteApiError):
 
 @register_exception(404, "Suggestion not found")
 class SuggestionNotFoundError(YoutubeAutoDeleteApiError):
-    """Sugerencia no encontrada."""
+    """Suggestion not found."""
 
     pass
 

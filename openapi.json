@@ -370,6 +370,56 @@
         }
       }
     },
+    "/api/youtube/playlists/{playlist_id}/delete": {
+      "post": {
+        "tags": [
+          "youtube"
+        ],
+        "summary": "Delete Playlist Videos",
+        "operationId": "delete_playlist_videos_api_youtube_playlists__playlist_id__delete_post",
+        "security": [
+          {
+            "Session Cookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Playlist Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePlaylistVideosRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/suggestions": {
       "get": {
         "tags": [
@@ -584,14 +634,14 @@
           "user"
         ],
         "title": "AuthSuccessResponse",
-        "description": "Respuesta exitosa de autenticación."
+        "description": "Successful authentication response."
       },
       "ContentDetails": {
         "properties": {
           "videoId": {
             "type": "string",
             "title": "Videoid",
-            "description": "ID del video"
+            "description": "Video ID"
           },
           "videoPublishedAt": {
             "anyOf": [
@@ -603,7 +653,7 @@
               }
             ],
             "title": "Videopublishedat",
-            "description": "Fecha de publicación del video original"
+            "description": "Original video publication date"
           }
         },
         "type": "object",
@@ -611,7 +661,48 @@
           "videoId"
         ],
         "title": "ContentDetails",
-        "description": "Detalles del contenido del video."
+        "description": "Video content details."
+      },
+      "DeletePlaylistVideosRequest": {
+        "properties": {
+          "playlist_id": {
+            "type": "string",
+            "title": "Playlist Id",
+            "description": "Playlist ID"
+          },
+          "include_private_videos": {
+            "type": "boolean",
+            "title": "Include Private Videos",
+            "description": "Include private videos"
+          },
+          "include_delete_videos": {
+            "type": "boolean",
+            "title": "Include Delete Videos",
+            "description": "Include deleted videos"
+          },
+          "video_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Ids",
+            "description": "IDs of videos to delete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "playlist_id",
+          "include_private_videos",
+          "include_delete_videos"
+        ],
+        "title": "DeletePlaylistVideosRequest"
       },
       "GoogleCodeLogin": {
         "properties": {
@@ -700,22 +791,22 @@
           "publishedAt": {
             "type": "string",
             "title": "Publishedat",
-            "description": "Fecha de publicación del item en la playlist"
+            "description": "Publication date of the item in the playlist"
           },
           "channelId": {
             "type": "string",
             "title": "Channelid",
-            "description": "ID del canal que agregó el video a la playlist"
+            "description": "Channel ID that added the video to the playlist"
           },
           "title": {
             "type": "string",
             "title": "Title",
-            "description": "Título del video"
+            "description": "Video title"
           },
           "description": {
             "type": "string",
             "title": "Description",
-            "description": "Descripción del video",
+            "description": "Video description",
             "default": ""
           },
           "thumbnails": {
@@ -731,21 +822,21 @@
           "channelTitle": {
             "type": "string",
             "title": "Channeltitle",
-            "description": "Nombre del canal que agregó el video"
+            "description": "Name of the channel that added the video"
           },
           "playlistId": {
             "type": "string",
             "title": "Playlistid",
-            "description": "ID de la playlist"
+            "description": "Playlist ID"
           },
           "position": {
             "type": "integer",
             "title": "Position",
-            "description": "Posición del video en la playlist"
+            "description": "Video position in the playlist"
           },
           "resourceId": {
             "$ref": "#/components/schemas/ResourceId",
-            "description": "ID del recurso (video)"
+            "description": "Resource ID (video)"
           },
           "videoOwnerChannelTitle": {
             "anyOf": [
@@ -757,7 +848,7 @@
               }
             ],
             "title": "Videoownerchanneltitle",
-            "description": "Título del canal que subió el video"
+            "description": "Title of the channel that uploaded the video"
           },
           "videoOwnerChannelId": {
             "anyOf": [
@@ -769,7 +860,7 @@
               }
             ],
             "title": "Videoownerchannelid",
-            "description": "ID del canal que subió el video"
+            "description": "ID of the channel that uploaded the video"
           }
         },
         "type": "object",
@@ -783,29 +874,29 @@
           "resourceId"
         ],
         "title": "PlaylistItemSnippet",
-        "description": "Snippet completo de un item en una playlist."
+        "description": "Complete snippet of a playlist item."
       },
       "PlaylistItemSnippet-Output": {
         "properties": {
           "publishedAt": {
             "type": "string",
             "title": "Publishedat",
-            "description": "Fecha de publicación del item en la playlist"
+            "description": "Publication date of the item in the playlist"
           },
           "channelId": {
             "type": "string",
             "title": "Channelid",
-            "description": "ID del canal que agregó el video a la playlist"
+            "description": "Channel ID that added the video to the playlist"
           },
           "title": {
             "type": "string",
             "title": "Title",
-            "description": "Título del video"
+            "description": "Video title"
           },
           "description": {
             "type": "string",
             "title": "Description",
-            "description": "Descripción del video",
+            "description": "Video description",
             "default": ""
           },
           "thumbnails": {
@@ -821,21 +912,21 @@
           "channelTitle": {
             "type": "string",
             "title": "Channeltitle",
-            "description": "Nombre del canal que agregó el video"
+            "description": "Name of the channel that added the video"
           },
           "playlistId": {
             "type": "string",
             "title": "Playlistid",
-            "description": "ID de la playlist"
+            "description": "Playlist ID"
           },
           "position": {
             "type": "integer",
             "title": "Position",
-            "description": "Posición del video en la playlist"
+            "description": "Video position in the playlist"
           },
           "resourceId": {
             "$ref": "#/components/schemas/ResourceId",
-            "description": "ID del recurso (video)"
+            "description": "Resource ID (video)"
           },
           "videoOwnerChannelTitle": {
             "anyOf": [
@@ -847,7 +938,7 @@
               }
             ],
             "title": "Videoownerchanneltitle",
-            "description": "Título del canal que subió el video"
+            "description": "Title of the channel that uploaded the video"
           },
           "videoOwnerChannelId": {
             "anyOf": [
@@ -859,7 +950,7 @@
               }
             ],
             "title": "Videoownerchannelid",
-            "description": "ID del canal que subió el video"
+            "description": "ID of the channel that uploaded the video"
           }
         },
         "type": "object",
@@ -873,33 +964,33 @@
           "resourceId"
         ],
         "title": "PlaylistItemSnippet",
-        "description": "Snippet completo de un item en una playlist."
+        "description": "Complete snippet of a playlist item."
       },
       "PlaylistItemVideo-Input": {
         "properties": {
           "kind": {
             "type": "string",
             "title": "Kind",
-            "description": "Tipo de recurso",
+            "description": "Resource type",
             "default": "youtube#playlistItem"
           },
           "etag": {
             "type": "string",
             "title": "Etag",
-            "description": "ETag del recurso"
+            "description": "Resource ETag"
           },
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "ID único del item en la playlist"
+            "description": "Unique item ID in the playlist"
           },
           "snippet": {
             "$ref": "#/components/schemas/PlaylistItemSnippet-Input",
-            "description": "Información del snippet del video"
+            "description": "Video snippet information"
           },
           "contentDetails": {
             "$ref": "#/components/schemas/ContentDetails",
-            "description": "Detalles del contenido"
+            "description": "Content details"
           }
         },
         "type": "object",
@@ -910,33 +1001,33 @@
           "contentDetails"
         ],
         "title": "PlaylistItemVideo",
-        "description": "Item completo de un video en una playlist."
+        "description": "Complete item of a video in a playlist."
       },
       "PlaylistItemVideo-Output": {
         "properties": {
           "kind": {
             "type": "string",
             "title": "Kind",
-            "description": "Tipo de recurso",
+            "description": "Resource type",
             "default": "youtube#playlistItem"
           },
           "etag": {
             "type": "string",
             "title": "Etag",
-            "description": "ETag del recurso"
+            "description": "Resource ETag"
           },
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "ID único del item en la playlist"
+            "description": "Unique item ID in the playlist"
           },
           "snippet": {
             "$ref": "#/components/schemas/PlaylistItemSnippet-Output",
-            "description": "Información del snippet del video"
+            "description": "Video snippet information"
           },
           "contentDetails": {
             "$ref": "#/components/schemas/ContentDetails",
-            "description": "Detalles del contenido"
+            "description": "Content details"
           }
         },
         "type": "object",
@@ -947,7 +1038,7 @@
           "contentDetails"
         ],
         "title": "PlaylistItemVideo",
-        "description": "Item completo de un video en una playlist."
+        "description": "Complete item of a video in a playlist."
       },
       "PlaylistSnippet": {
         "properties": {
@@ -1026,12 +1117,12 @@
             },
             "type": "array",
             "title": "Items",
-            "description": "Lista de items de la playlist"
+            "description": "List of playlist items"
           },
           "total_results": {
             "type": "integer",
             "title": "Total Results",
-            "description": "Total de resultados"
+            "description": "Total results"
           },
           "next_page_token": {
             "anyOf": [
@@ -1043,7 +1134,7 @@
               }
             ],
             "title": "Next Page Token",
-            "description": "Token de la siguiente página"
+            "description": "Next page token"
           },
           "prev_page_token": {
             "anyOf": [
@@ -1055,11 +1146,11 @@
               }
             ],
             "title": "Prev Page Token",
-            "description": "Token de la página anterior"
+            "description": "Previous page token"
           },
           "page_info": {
             "$ref": "#/components/schemas/PageInfo",
-            "description": "Información de la página"
+            "description": "Page information"
           }
         },
         "type": "object",
@@ -1069,19 +1160,19 @@
           "page_info"
         ],
         "title": "PlaylistVideoResponse",
-        "description": "Respuesta paginada de videos de playlist con schemas completos."
+        "description": "Paginated response of playlist videos with complete schemas."
       },
       "ResourceId": {
         "properties": {
           "kind": {
             "type": "string",
             "title": "Kind",
-            "description": "Tipo de recurso, generalmente 'youtube#video'"
+            "description": "Resource type, usually 'youtube#video'"
           },
           "videoId": {
             "type": "string",
             "title": "Videoid",
-            "description": "ID del video de YouTube"
+            "description": "YouTube video ID"
           }
         },
         "type": "object",
@@ -1090,7 +1181,7 @@
           "videoId"
         ],
         "title": "ResourceId",
-        "description": "Resource ID que identifica el video."
+        "description": "Resource ID that identifies the video."
       },
       "SuggestionCreate": {
         "properties": {
@@ -1099,14 +1190,14 @@
             "maxLength": 200,
             "minLength": 1,
             "title": "Title",
-            "description": "Título de la sugerencia"
+            "description": "Suggestion title"
           },
           "description": {
             "type": "string",
             "maxLength": 1000,
             "minLength": 1,
             "title": "Description",
-            "description": "Descripción de la sugerencia"
+            "description": "Suggestion description"
           }
         },
         "additionalProperties": false,
@@ -1116,7 +1207,7 @@
           "description"
         ],
         "title": "SuggestionCreate",
-        "description": "Schema para crear una sugerencia."
+        "description": "Schema for creating a suggestion."
       },
       "SuggestionListResponse": {
         "properties": {
@@ -1126,12 +1217,12 @@
             },
             "type": "array",
             "title": "Items",
-            "description": "Lista de sugerencias"
+            "description": "List of suggestions"
           },
           "total": {
             "type": "integer",
             "title": "Total",
-            "description": "Total de sugerencias"
+            "description": "Total suggestions"
           }
         },
         "additionalProperties": false,
@@ -1141,36 +1232,36 @@
           "total"
         ],
         "title": "SuggestionListResponse",
-        "description": "Schema de respuesta para una lista de sugerencias."
+        "description": "Response schema for a list of suggestions."
       },
       "SuggestionResponse": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "ID único de la sugerencia"
+            "description": "Unique suggestion ID"
           },
           "title": {
             "type": "string",
             "title": "Title",
-            "description": "Título de la sugerencia"
+            "description": "Suggestion title"
           },
           "description": {
             "type": "string",
             "title": "Description",
-            "description": "Descripción de la sugerencia"
+            "description": "Suggestion description"
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
             "title": "Created At",
-            "description": "Fecha de creación"
+            "description": "Creation date"
           },
           "updated_at": {
             "type": "string",
             "format": "date-time",
             "title": "Updated At",
-            "description": "Fecha de última actualización"
+            "description": "Last update date"
           }
         },
         "additionalProperties": false,
@@ -1183,7 +1274,7 @@
           "updated_at"
         ],
         "title": "SuggestionResponse",
-        "description": "Schema de respuesta para una sugerencia."
+        "description": "Response schema for a suggestion."
       },
       "SuggestionUpdate": {
         "properties": {
@@ -1199,7 +1290,7 @@
               }
             ],
             "title": "Title",
-            "description": "Título de la sugerencia"
+            "description": "Suggestion title"
           },
           "description": {
             "anyOf": [
@@ -1213,13 +1304,13 @@
               }
             ],
             "title": "Description",
-            "description": "Descripción de la sugerencia"
+            "description": "Suggestion description"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "SuggestionUpdate",
-        "description": "Schema para actualizar una sugerencia."
+        "description": "Schema for updating a suggestion."
       },
       "Thumbnail": {
         "properties": {
@@ -1243,7 +1334,7 @@
           "height"
         ],
         "title": "Thumbnail",
-        "description": "Thumbnail individual con tamaño específico."
+        "description": "Individual thumbnail with specific size."
       },
       "Thumbnails": {
         "properties": {
@@ -1300,7 +1391,7 @@
         },
         "type": "object",
         "title": "Thumbnails",
-        "description": "Todos los thumbnails disponibles para un video."
+        "description": "All available thumbnails for a video."
       },
       "UserInfo": {
         "properties": {
@@ -1341,7 +1432,7 @@
           "email"
         ],
         "title": "UserInfo",
-        "description": "Información del usuario autenticado."
+        "description": "Authenticated user information."
       },
       "ValidationError": {
         "properties": {
@@ -1381,13 +1472,13 @@
           "kind": {
             "type": "string",
             "title": "Kind",
-            "description": "Tipo de respuesta",
+            "description": "Response type",
             "default": "youtube#playlistListResponse"
           },
           "etag": {
             "type": "string",
             "title": "Etag",
-            "description": "Etag de la respuesta"
+            "description": "Response etag"
           },
           "nextPageToken": {
             "anyOf": [
@@ -1399,11 +1490,11 @@
               }
             ],
             "title": "Nextpagetoken",
-            "description": "Token de la siguiente página"
+            "description": "Next page token"
           },
           "pageInfo": {
             "$ref": "#/components/schemas/PageInfo",
-            "description": "Información de la página"
+            "description": "Page information"
           },
           "items": {
             "items": {
@@ -1411,7 +1502,7 @@
             },
             "type": "array",
             "title": "Items",
-            "description": "Lista de items de la playlist"
+            "description": "List of playlist items"
           }
         },
         "type": "object",

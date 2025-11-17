@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any
 
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, BotoCoreError
 from boto3.dynamodb.conditions import BeginsWith
 
 from src.domain.entities.suggestion import Suggestion
@@ -63,6 +63,13 @@ class DynamoDBSuggestionRepository(BaseRepository[SuggestionModel], ISuggestionR
         except ClientError as e:
             logger.exception("Error obteniendo todas las sugerencias")
             raise AwsFailedError("failed to get suggestions", "DynamoDB Failed") from e
+        except BotoCoreError as e:
+            logger.error(f"BotoCore error obteniendo sugerencias: {e}")
+            raise AwsFailedError("failed to get suggestions", "DynamoDB connection error") from e
+        except (ValueError, KeyError, AttributeError) as e:
+            logger.error(f"Data parsing error obteniendo sugerencias: {e}")
+            # Return empty list on data parsing errors
+            return []
         except Exception as e:
             logger.exception("Error inesperado obteniendo sugerencias")
             return []

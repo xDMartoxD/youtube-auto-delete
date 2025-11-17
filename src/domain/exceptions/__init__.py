@@ -1,0 +1,9 @@
+"""Domain exceptions - business logic exceptions."""
+
+from src.domain.exceptions.domain_exceptions import (
+    DomainException,
+    SuggestionNotFoundDomainException,
+)
+
+__all__ = ["DomainException", "SuggestionNotFoundDomainException"]
+

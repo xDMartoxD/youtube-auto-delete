@@ -2,9 +2,12 @@
 
 import json
 import logging
+import ssl
 from typing import Any, Callable, TypeVar
 from functools import wraps
+
 import redis.asyncio as aioredis
+
 from src.core.config import config
 
 logger = logging.getLogger(__name__)
@@ -44,8 +47,6 @@ async def get_redis_client() -> aioredis.Redis:
             # Note: from_url() handles SSL automatically for rediss:// URLs
             # But we can configure SSL parameters if needed
             if use_tls or config.redis_use_tls:
-                import ssl
-
                 # Configure certificate requirements
                 # For ElastiCache, typically use 'required' or 'optional'
                 cert_reqs_map = {
@@ -78,8 +79,6 @@ async def get_redis_client() -> aioredis.Redis:
 
             # Add TLS configuration if needed
             if config.redis_use_tls:
-                import ssl
-
                 ssl_context = ssl.create_default_context()
 
                 cert_reqs_map = {

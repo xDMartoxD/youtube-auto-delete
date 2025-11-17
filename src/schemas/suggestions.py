@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
 
 
 class SuggestionCreate(BaseModel):
@@ -15,8 +14,8 @@ class SuggestionCreate(BaseModel):
 class SuggestionUpdate(BaseModel):
     """Schema para actualizar una sugerencia."""
 
-    title: Optional[str] = Field(None, description="Título de la sugerencia", min_length=1, max_length=200)
-    description: Optional[str] = Field(None, description="Descripción de la sugerencia", min_length=1, max_length=1000)
+    title: str | None = Field(None, description="Título de la sugerencia", min_length=1, max_length=200)
+    description: str | None = Field(None, description="Descripción de la sugerencia", min_length=1, max_length=1000)
 
     model_config = {"extra": "forbid"}
 

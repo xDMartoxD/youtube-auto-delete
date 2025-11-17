@@ -2,7 +2,8 @@
 from typing import Annotated
 from fastapi import Query
 from datetime import datetime, timezone
-from src.schemas.youtube import PlaylistVideoQueryParams
+
+from src.schemas.youtube import PaginationParams, PlaylistVideoQueryParams
 from src.core.exceptions import InvalidDateRangeError
 
 
@@ -43,8 +44,6 @@ def get_pagination_params(
     ] = None,
 ):
     """Dependency para parsear PaginationParams desde query strings."""
-    from src.schemas.youtube import PaginationParams
-
     return PaginationParams(max_results=max_results, page_token=page_token)
 
 

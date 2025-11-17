@@ -1,8 +1,8 @@
 import logging
 import sys
 import json
-from typing import Any, Dict, Optional
-from datetime import datetime
+from typing import Any, Dict
+from datetime import datetime, timezone
 import traceback
 
 
@@ -11,7 +11,7 @@ class StructuredFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -21,18 +21,23 @@ class StructuredFormatter(logging.Formatter):
         }
 
         # Agregar información adicional si está disponible
-        if hasattr(record, "user_id"):
-            log_entry["user_id"] = record.user_id
-        if hasattr(record, "request_id"):
-            log_entry["request_id"] = record.request_id
-        if hasattr(record, "operation"):
-            log_entry["operation"] = record.operation
+        user_id = getattr(record, "user_id", None)
+        if user_id is not None:
+            log_entry["user_id"] = user_id
+
+        request_id = getattr(record, "request_id", None)
+        if request_id is not None:
+            log_entry["request_id"] = request_id
+
+        operation = getattr(record, "operation", None)
+        if operation is not None:
+            log_entry["operation"] = operation
 
         # Agregar excepción si está presente
-        if record.exc_info:
+        if record.exc_info and record.exc_info[0] is not None:
             log_entry["exception"] = {
                 "type": record.exc_info[0].__name__,
-                "message": str(record.exc_info[1]),
+                "message": str(record.exc_info[1]) if record.exc_info[1] else "",
                 "traceback": traceback.format_exception(*record.exc_info),
             }
 
@@ -75,7 +80,7 @@ class ContextFilter(logging.Filter):
         return True
 
 
-def setup_logging(level: int = logging.INFO, fmt: str | None = None) -> None:
+def setup_logging(level: int = logging.INFO) -> None:
     """
     Configura el sistema de logging estructurado para la aplicación.
     """

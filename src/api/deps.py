@@ -6,12 +6,21 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from src.core.exceptions import AuthenticationFailedError
 from src.schemas.auth import SessionValidation
-from src.services.youtube import YoutubeService
-from src.services.auth import AuthService
-from src.services.suggestions import SuggestionsService
-from src.services.google_client import GoogleClient
-from src.db.repositories.auth import AuthRepository
-from src.db.repositories.suggestions import SuggestionsRepository
+from src.application.services.youtube_service import YoutubeService
+from src.application.services.auth_service import AuthService
+from src.application.services.suggestions_service import SuggestionsService
+from src.infrastructure.external_services.google_client import GoogleClient
+from src.infrastructure.repositories.dynamodb_user_repository import (
+    DynamoDBUserRepository,
+)
+from src.infrastructure.repositories.dynamodb_suggestion_repository import (
+    DynamoDBSuggestionRepository,
+)
+from src.domain.services.session_service import SessionService
+from src.domain.services.video_filter_service import VideoFilterService
+from src.domain.services.suggestion_service import SuggestionService
+from src.infrastructure.services.jwt_service import JWTService
+from src.infrastructure.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +46,8 @@ cookie_security = CookieSecurity()
 
 
 @lru_cache
-def _get_auth_repository() -> AuthRepository:
-    return AuthRepository()
+def _get_user_repository() -> DynamoDBUserRepository:
+    return DynamoDBUserRepository()
 
 
 def _get_google_client(request: Request) -> GoogleClient:
@@ -47,14 +56,23 @@ def _get_google_client(request: Request) -> GoogleClient:
 
 
 def get_auth_service(
-    auth_repo: AuthRepository = Depends(_get_auth_repository),
+    user_repo: DynamoDBUserRepository = Depends(_get_user_repository),
     google_client: GoogleClient = Depends(_get_google_client),
 ) -> Generator[AuthService, None, None]:
-    svc = AuthService(google_client, auth_repo)
+    """Dependency para crear AuthService con inyección de dominio e infraestructura."""
+    # Crear instancias de servicios de dominio e infraestructura
+    session_service = SessionService()
+    jwt_service = JWTService()
+
+    svc = AuthService(
+        client=google_client,
+        user_repo=user_repo,
+        session_service=session_service,
+        jwt_service=jwt_service,
+    )
     try:
         yield svc
     finally:
-        # cleanup si es necesario
         pass
 
 
@@ -96,12 +114,17 @@ async def get_youtube_service(
     session: current_session_dependency,
 ) -> AsyncGenerator[YoutubeService, None]:
     """Create and initialize YouTube service for authenticated user."""
-    service = YoutubeService(session)
+    video_filter_service = VideoFilterService()
+    cache_service = CacheService()
+    service = YoutubeService(
+        session,
+        video_filter_service=video_filter_service,
+        cache_service=cache_service,
+    )
     await service.initialize()
     try:
         yield service
     finally:
-        # cleanup si es necesario en el futuro
         pass
 
 
@@ -109,19 +132,28 @@ youtube_service_dependency = Annotated[YoutubeService, Depends(get_youtube_servi
 
 
 @lru_cache
-def _get_suggestions_repository() -> SuggestionsRepository:
-    return SuggestionsRepository()
+def _get_suggestions_repository() -> DynamoDBSuggestionRepository:
+    return DynamoDBSuggestionRepository()
 
 
 def get_suggestions_service(
-    suggestions_repo: SuggestionsRepository = Depends(_get_suggestions_repository),
+    suggestions_repo: DynamoDBSuggestionRepository = Depends(
+        _get_suggestions_repository
+    ),
 ) -> Generator[SuggestionsService, None, None]:
-    svc = SuggestionsService(suggestions_repo)
+    """Dependency para crear SuggestionsService con inyección de dominio."""
+    suggestion_service = SuggestionService()
+
+    svc = SuggestionsService(
+        suggestion_repo=suggestions_repo,
+        suggestion_service=suggestion_service,
+    )
     try:
         yield svc
     finally:
-        # cleanup si es necesario
         pass
 
 
-suggestions_service_dependency = Annotated[SuggestionsService, Depends(get_suggestions_service)]
+suggestions_service_dependency = Annotated[
+    SuggestionsService, Depends(get_suggestions_service)
+]

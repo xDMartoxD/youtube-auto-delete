@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, status, Response
 from src.api.deps import (
     auth_service_dependency,
     current_session_dependency,
-    get_current_session,
 )
 from src.schemas.auth import (
     GoogleCodeLogin,
@@ -79,7 +78,7 @@ async def logout(
 @router.get("/me", response_model=AuthSuccessResponse)
 async def get_user_profile(
     auth_service: auth_service_dependency,
-    session: SessionValidation = Depends(get_current_session),
+    session: current_session_dependency,
 ):
     """
     Get current user profile information.

@@ -2,8 +2,8 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from src.services.google_client import GoogleClient
-from src.db.core import ensure_table  # idempotente
+from src.infrastructure.external_services.google_client import GoogleClient
+from src.infrastructure.persistence.dynamodb.table import ensure_table
 from src.core.cache import get_redis_client, close_redis_client
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,10 @@ async def lifespan(app):
         result = await redis_client.ping()  # type: ignore[awaitable-is-bool]
         logger.info(f"✅ Redis connection established - ping result: {result}")
     except Exception as e:
-        logger.error(f"❌ Failed to connect to Redis: {e}. Cache will not be available.", exc_info=True)
+        logger.error(
+            f"❌ Failed to connect to Redis: {e}. Cache will not be available.",
+            exc_info=True,
+        )
 
     try:
         yield

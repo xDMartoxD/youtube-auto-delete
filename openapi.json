@@ -681,19 +681,13 @@
             "description": "Include deleted videos"
           },
           "video_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
             "title": "Video Ids",
-            "description": "IDs of videos to delete"
+            "description": "IDs of videos to delete",
+            "default": []
           }
         },
         "type": "object",

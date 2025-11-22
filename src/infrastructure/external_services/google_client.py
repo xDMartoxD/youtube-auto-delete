@@ -1,5 +1,6 @@
 """Google OAuth client - infrastructure service."""
 
+import logging
 from pydantic import ValidationError
 from src.schemas.auth import (
     GoogleAuthResponse,
@@ -14,6 +15,8 @@ import httpx
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleClient:
@@ -125,14 +128,27 @@ class GoogleClient:
 
     async def revoke_access_token(self, access_token: str) -> None:
         """
-        Revoke an access token.
+        Revoke an access token using Google's OAuth2 revoke endpoint.
         """
+        if not access_token:
+            logger.warning("Attempted to revoke empty access token")
+            return
+
         try:
-            creds = Credentials(token=access_token)
-            service = build("oauth2", "v2", credentials=creds)
-            service.token().revoke().execute()
-        except HttpError as e:
-            raise AuthenticationFailedError(message="Google API error: " + str(e))
+            # Use Google's OAuth2 revoke endpoint directly
+            resp = await self._client.post(
+                "https://oauth2.googleapis.com/revoke",
+                params={"token": access_token},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            # Google returns 200 even if token is already revoked or invalid
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            # Log but don't fail - token might already be revoked
+            logger.warning(f"HTTP error revoking token: {e}")
+        except Exception as e:
+            logger.warning(f"Error revoking token: {e}")
+            # Don't raise - logout should succeed even if revoke fails
 
     async def close(self):
         try:

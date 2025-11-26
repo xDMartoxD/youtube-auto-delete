@@ -1,15 +1,46 @@
-FROM python:3.13
+# Multi-stage build for production
+# Optimized for ECS/EKS deployments
+FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
+# Install build dependencies in a single layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies
+# Copy requirements first for better layer caching
 COPY requirements.txt .
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir --user -r requirements.txt
 
-RUN python -m pip install --upgrade pip && pip install -r requirements.txt
+# Production stage
+FROM python:3.13-slim
 
-RUN pip install --no-cache-dir debugpy
+WORKDIR /app
 
-COPY . .
+# Copy Python dependencies from builder
+COPY --from=builder /root/.local /root/.local
+
+# Copy application code
+COPY src/ ./src/
+
+# Set PATH to include user's local bin
+ENV PATH=/root/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONHASHSEED=random
 
 EXPOSE 80
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+# Health check for ECS (ECS will use this if no health check is defined in task definition)
+# Uses readiness endpoint to ensure service is ready to receive traffic
+# For Kubernetes, use liveness/readiness probes instead (configured in deployment.yaml)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:80/v1/health/ready', timeout=5)" || exit 1
+
+# Production command without --reload
+# For ECS/EKS: Use 1 worker per container and scale horizontally (more tasks/pods)
+# Workers can be set via UVICORN_WORKERS env var, default is 1 for containerized deployments
+CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port 80 --workers ${UVICORN_WORKERS:-1} --no-access-log"]

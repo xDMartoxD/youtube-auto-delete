@@ -26,14 +26,23 @@ class BaseRepository(ABC, Generic[T]):
 
     def __init__(self, table_name: str | None = None) -> None:
         self.table_name = table_name or config.table_name
-        # Build resource with endpoint_url for local DynamoDB if configured
-        self._dynamodb = boto3.resource(
-            "dynamodb",
-            region_name=config.aws_region,
-            aws_access_key_id=config.aws_access_key_id,
-            aws_secret_access_key=config.aws_secret_access_key,
-            endpoint_url=config.dynamodb_endpoint,
-        )
+        
+        # Build boto3 resource kwargs based on environment
+        resource_kwargs: dict[str, Any] = {
+            "region_name": config.aws_region,
+        }
+        
+        # Only use explicit credentials in development
+        # In production (EKS), use IRSA (IAM Roles for Service Accounts)
+        if config.app_env == "dev":
+            resource_kwargs["aws_access_key_id"] = config.aws_access_key_id
+            resource_kwargs["aws_secret_access_key"] = config.aws_secret_access_key
+        
+        # endpoint_url is only used for local DynamoDB
+        if config.dynamodb_endpoint:
+            resource_kwargs["endpoint_url"] = config.dynamodb_endpoint
+        
+        self._dynamodb = boto3.resource("dynamodb", **resource_kwargs)
         self.table = self._dynamodb.Table(self.table_name)
 
     async def insert(self, item: T) -> PutItemOutputTableTypeDef | None:

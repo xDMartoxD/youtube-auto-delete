@@ -29,8 +29,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not self.enabled or not config.rate_limit_enabled:
             return await call_next(request)
 
-        # Skip rate limiting for health checks
-        if request.url.path.startswith("/api/health"):
+        # Skip rate limiting for health checks and OPTIONS requests (CORS preflight)
+        if (
+            request.url.path.startswith("/v1/health")
+            or request.url.path.startswith("/api/health")  # Legacy support
+            or request.method == "OPTIONS"
+        ):
             return await call_next(request)
 
         # Get client IP
@@ -47,7 +51,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if minute_count and int(minute_count) >= self.requests_per_minute:
                 logger.warning(
                     f"Rate limit exceeded (per minute) for IP: {client_ip}",
-                    extra={"ip": client_ip, "limit": self.requests_per_minute}
+                    extra={"ip": client_ip, "limit": self.requests_per_minute},
                 )
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -61,7 +65,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if hour_count and int(hour_count) >= self.requests_per_hour:
                 logger.warning(
                     f"Rate limit exceeded (per hour) for IP: {client_ip}",
-                    extra={"ip": client_ip, "limit": self.requests_per_hour}
+                    extra={"ip": client_ip, "limit": self.requests_per_hour},
                 )
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -77,7 +81,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             minute_key_with_time = f"{minute_key}:{current_minute}"
             minute_count = await redis_client.incr(minute_key_with_time)
             await redis_client.expire(minute_key_with_time, 60)
-            
+
             # Update the main minute key for checking (use max of current window)
             existing_minute = await redis_client.get(minute_key)
             if not existing_minute or minute_count > int(existing_minute):
@@ -87,7 +91,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             hour_key_with_time = f"{hour_key}:{current_hour}"
             hour_count = await redis_client.incr(hour_key_with_time)
             await redis_client.expire(hour_key_with_time, 3600)
-            
+
             # Update the main hour key for checking (use max of current window)
             existing_hour = await redis_client.get(hour_key)
             if not existing_hour or hour_count > int(existing_hour):
@@ -95,14 +99,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         except HTTPException:
             raise
-        except (aioredis.RedisError, aioredis.ConnectionError, aioredis.TimeoutError) as e:
+        except (
+            aioredis.RedisError,
+            aioredis.ConnectionError,
+            aioredis.TimeoutError,
+        ) as e:
             # If Redis is unavailable, log and allow request (fail open)
             logger.warning(f"Redis error in rate limiting (allowing request): {e}")
             # In production, you might want to fail closed instead
         except Exception as e:
             # If Redis is unavailable, log and allow request (fail open)
-            logger.error(f"Unexpected error in rate limiting (allowing request): {e}", exc_info=True)
+            logger.error(
+                f"Unexpected error in rate limiting (allowing request): {e}",
+                exc_info=True,
+            )
             # In production, you might want to fail closed instead
 
         return await call_next(request)
-

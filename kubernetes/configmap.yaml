@@ -13,6 +13,7 @@ data:
 
     # Redis/ElastiCache Configuration
     redis_use_tls: "true"
+    redis_url: "rediss://youtube-auto-delete-cache-u4q3ql.serverless.use1.cache.amazonaws.com:6379"
 
     # Rate Limiting Configuration
     rate_limit_enabled: "true"
@@ -21,12 +22,13 @@ data:
 
     # Cache TTL Configuration (in seconds)
     cache_ttl_user_playlists: "1800"
-    cache_ttl_playlist_videos: "3600"
-    cache_ttl_playlist_videos_by_date: "3600"
-    cache_ttl_user_profile: "3600"
+    cache_ttl_playlist_videos: "1800"
+    cache_ttl_playlist_videos_by_date: "1800"
+    cache_ttl_user_profile: "1800"
     cache_ttl_user_session: "600"
-    cache_ttl_default: "3600"
+    cache_ttl_default: "1800"
 
+    # App Configuration (temporary - move to Secrets later)
     python_path: "/app"
     app_env: "production"
     google_client_id: "1045602413659-ns6cq27oi7ro1vj9pd9m8biq7q59j259.apps.googleusercontent.com"

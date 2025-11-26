@@ -1,0 +1,42 @@
+# Docker Compose para probar el Dockerfile de producción localmente
+services:
+  fastapi-prod:
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile.prod
+    ports:
+      - "8080:80"
+    env_file:
+      - .env
+    environment:
+      # Override para producción local
+      - APP_ENV=production
+      - LOG_LEVEL=INFO
+      # Redis - usar local o ElastiCache según tu .env
+      - REDIS_HOST=${REDIS_HOST:-valkey}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+    depends_on:
+      - dynamodb
+      - valkey
+    # No usar volúmenes en producción (imagen debe contener todo)
+    # No usar debugpy ni reload
+
+  valkey:
+    image: valkey/valkey:8.1-alpine
+    container_name: valkey-prod-test
+    ports:
+      - "6379:6379"
+    command: valkey-server --appendonly yes
+    volumes:
+      - valkey_data:/data
+
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local-prod-test
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+
+volumes:
+  valkey_data:
+

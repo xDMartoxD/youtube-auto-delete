@@ -66,7 +66,10 @@ table_def: CreateTableInputServiceResourceCreateTableTypeDef = {
 
 
 def ensure_table() -> None:
-    """Crea la tabla si no existe, usando configuración desde config."""
+    """
+    Crea la tabla si no existe, usando configuración desde config.
+    Thread-safe: maneja el caso donde múltiples workers intentan crear la tabla simultáneamente.
+    """
     table_name = table_def["TableName"]
     logger.info(
         "🔍 Verificando tabla DynamoDB: '%s' en endpoint: %s",
@@ -85,6 +88,22 @@ def ensure_table() -> None:
                 table = dynamodb.create_table(**table_def)
                 table.wait_until_exists()
                 logger.info("✅ Tabla '%s' creada correctamente.", table.name)
+            except ClientError as create_error:
+                create_error_code = create_error.response.get("Error", {}).get("Code")
+                # Si otro worker ya está creando la tabla, esperamos a que esté lista
+                if create_error_code == "ResourceInUseException":
+                    logger.info(
+                        "⏳ Tabla '%s' está siendo creada por otro proceso. Esperando...",
+                        table_name,
+                    )
+                    table = dynamodb.Table(table_name)
+                    table.wait_until_exists()
+                    logger.info("✅ Tabla '%s' está lista (creada por otro proceso).", table_name)
+                else:
+                    logger.exception(
+                        "❌ Error al crear la tabla '%s': %s", table_name, create_error
+                    )
+                    raise
             except Exception as create_error:
                 logger.exception(
                     "❌ Error al crear la tabla '%s': %s", table_name, create_error

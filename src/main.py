@@ -38,7 +38,7 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
 
     # Routers (use /api prefix for all routes)
-    API_PREFIX = "/api"
+    API_PREFIX = "/v1"
     app.include_router(auth_router, prefix=f"{API_PREFIX}/auth", tags=["auth"])
     app.include_router(health_router, prefix=f"{API_PREFIX}/health", tags=["health"])
     app.include_router(youtube_router, prefix=f"{API_PREFIX}/youtube", tags=["youtube"])

@@ -13,10 +13,12 @@ logger = get_logger("health")
 router = APIRouter()
 
 
-@router.get("/health")
+@router.get("/")
 async def health_check():
     """
-    Endpoint de health check básico.
+    Endpoint de health check básico (liveness).
+    Retorna 200 OK si el proceso está vivo.
+    Usado por ECS/Kubernetes para liveness probes.
     """
     return {
         "status": "healthy",
@@ -26,7 +28,7 @@ async def health_check():
     }
 
 
-@router.get("/health/detailed")
+@router.get("/detailed")
 async def detailed_health_check():
     """
     Health check detallado que verifica dependencias.
@@ -49,13 +51,13 @@ async def detailed_health_check():
     except (botocore.exceptions.ClientError, botocore.exceptions.BotoCoreError) as e:
         health_status["checks"]["dynamodb"] = {
             "status": "unhealthy",
-            "message": f"AWS/DynamoDB error: {str(e)}"
+            "message": f"AWS/DynamoDB error: {str(e)}",
         }
         health_status["status"] = "unhealthy"
     except Exception as e:
         health_status["checks"]["dynamodb"] = {
             "status": "unhealthy",
-            "message": f"Unexpected error: {str(e)}"
+            "message": f"Unexpected error: {str(e)}",
         }
         health_status["status"] = "unhealthy"
 
@@ -95,11 +97,19 @@ async def get_metrics():
 @router.get("/ready")
 async def readiness_check():
     """
-    Endpoint de readiness check para Kubernetes.
+    Endpoint de readiness check para Kubernetes/ECS.
+    Retorna 200 OK si el servicio está listo para recibir tráfico.
+    Retorna 503 si el servicio no está listo (dependencias no disponibles).
+    Usado por Kubernetes readiness probes y ECS health checks.
     """
     try:
-        # Basic readiness checks
-        return {"status": "ready", "timestamp": datetime.now(timezone.utc).isoformat()}
+        # Verificar que la aplicación está inicializada
+        # (el lifespan ya se ejecutó si llegamos aquí)
+        return {
+            "status": "ready",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "service": "youtube-auto-delete-api",
+        }
     except (ValueError, KeyError) as e:
         logger.error(f"Readiness check validation error: {e}")
         raise HTTPException(status_code=503, detail="Service not ready") from e

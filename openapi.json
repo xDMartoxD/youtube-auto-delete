@@ -5,14 +5,14 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/auth/exchange": {
+    "/v1/auth/exchange": {
       "post": {
         "tags": [
           "auth"
         ],
         "summary": "Code Login",
         "description": "Intercambia un código de autorización de Google por tokens y crea una sesión.\n\n- **code**: Código de autorización obtenido de Google OAuth\n- **redirect_uri**: URI de redirección registrada en Google Console\n\nRetorna información del usuario autenticado y establece una cookie de sesión.",
-        "operationId": "code_login_api_auth_exchange_post",
+        "operationId": "code_login_v1_auth_exchange_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -47,14 +47,14 @@
         }
       }
     },
-    "/api/auth/logout": {
+    "/v1/auth/logout": {
       "post": {
         "tags": [
           "auth"
         ],
         "summary": "Logout",
         "description": "Logout the current user by clearing the session cookie.",
-        "operationId": "logout_api_auth_logout_post",
+        "operationId": "logout_v1_auth_logout_post",
         "responses": {
           "202": {
             "description": "Successful Response",
@@ -63,7 +63,7 @@
                 "schema": {
                   "additionalProperties": true,
                   "type": "object",
-                  "title": "Response Logout Api Auth Logout Post"
+                  "title": "Response Logout V1 Auth Logout Post"
                 }
               }
             }
@@ -76,14 +76,14 @@
         ]
       }
     },
-    "/api/auth/me": {
+    "/v1/auth/me": {
       "get": {
         "tags": [
           "auth"
         ],
         "summary": "Get User Profile",
         "description": "Get current user profile information.\n\n**Authentication Required**: This endpoint requires a valid session cookie.\nThe session cookie is automatically set after successful login via `/auth/exchange`.\n\n**Cookie Details**:\n- Name: `session_token`\n- Type: HTTP-only cookie\n- Security: Secure, SameSite=Strict",
-        "operationId": "get_user_profile_api_auth_me_get",
+        "operationId": "get_user_profile_v1_auth_me_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -103,14 +103,14 @@
         ]
       }
     },
-    "/api/health/health": {
+    "/v1/health/": {
       "get": {
         "tags": [
           "health"
         ],
         "summary": "Health Check",
         "description": "Endpoint de health check básico.",
-        "operationId": "health_check_api_health_health_get",
+        "operationId": "health_check_v1_health__get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -123,14 +123,14 @@
         }
       }
     },
-    "/api/health/health/detailed": {
+    "/v1/health/detailed": {
       "get": {
         "tags": [
           "health"
         ],
         "summary": "Detailed Health Check",
         "description": "Health check detallado que verifica dependencias.",
-        "operationId": "detailed_health_check_api_health_health_detailed_get",
+        "operationId": "detailed_health_check_v1_health_detailed_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -143,14 +143,14 @@
         }
       }
     },
-    "/api/health/metrics": {
+    "/v1/health/metrics": {
       "get": {
         "tags": [
           "health"
         ],
         "summary": "Get Metrics",
         "description": "Endpoint básico de métricas de la aplicación.",
-        "operationId": "get_metrics_api_health_metrics_get",
+        "operationId": "get_metrics_v1_health_metrics_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -163,14 +163,14 @@
         }
       }
     },
-    "/api/health/ready": {
+    "/v1/health/ready": {
       "get": {
         "tags": [
           "health"
         ],
         "summary": "Readiness Check",
         "description": "Endpoint de readiness check para Kubernetes.",
-        "operationId": "readiness_check_api_health_ready_get",
+        "operationId": "readiness_check_v1_health_ready_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -183,14 +183,14 @@
         }
       }
     },
-    "/api/youtube/playlists": {
+    "/v1/youtube/playlists": {
       "get": {
         "tags": [
           "youtube"
         ],
         "summary": "Get User Playlists",
         "description": "Get user's YouTube playlists with pagination.",
-        "operationId": "get_user_playlists_api_youtube_playlists_get",
+        "operationId": "get_user_playlists_v1_youtube_playlists_get",
         "security": [
           {
             "Session Cookie": []
@@ -254,14 +254,14 @@
         }
       }
     },
-    "/api/youtube/playlists/{playlist_id}/videos": {
+    "/v1/youtube/playlists/{playlist_id}/videos": {
       "get": {
         "tags": [
           "youtube"
         ],
         "summary": "Get Playlist Videos",
         "description": "Get videos from a YouTube playlist with pagination and optional date filtering.\n\n- **max_results**: Número máximo de resultados por página (1-50)\n- **page_token**: Token de página para paginación\n- **date_from**: Filtrar videos agregados a la playlist desde esta fecha (ISO 8601)\n- **date_to**: Filtrar videos agregados a la playlist hasta esta fecha (ISO 8601)",
-        "operationId": "get_playlist_videos_api_youtube_playlists__playlist_id__videos_get",
+        "operationId": "get_playlist_videos_v1_youtube_playlists__playlist_id__videos_get",
         "security": [
           {
             "Session Cookie": []
@@ -370,13 +370,13 @@
         }
       }
     },
-    "/api/youtube/playlists/{playlist_id}/delete": {
+    "/v1/youtube/playlists/{playlist_id}/delete": {
       "post": {
         "tags": [
           "youtube"
         ],
         "summary": "Delete Playlist Videos",
-        "operationId": "delete_playlist_videos_api_youtube_playlists__playlist_id__delete_post",
+        "operationId": "delete_playlist_videos_v1_youtube_playlists__playlist_id__delete_post",
         "security": [
           {
             "Session Cookie": []
@@ -420,14 +420,14 @@
         }
       }
     },
-    "/api/suggestions": {
+    "/v1/suggestions": {
       "get": {
         "tags": [
           "suggestions"
         ],
         "summary": "Get All Suggestions",
         "description": "Obtiene todas las sugerencias.",
-        "operationId": "get_all_suggestions_api_suggestions_get",
+        "operationId": "get_all_suggestions_v1_suggestions_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -447,7 +447,7 @@
         ],
         "summary": "Create Suggestion",
         "description": "Crea una nueva sugerencia.\n\n- **title**: Título de la sugerencia (1-200 caracteres)\n- **description**: Descripción de la sugerencia (1-1000 caracteres)",
-        "operationId": "create_suggestion_api_suggestions_post",
+        "operationId": "create_suggestion_v1_suggestions_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -482,14 +482,14 @@
         }
       }
     },
-    "/api/suggestions/{suggestion_id}": {
+    "/v1/suggestions/{suggestion_id}": {
       "get": {
         "tags": [
           "suggestions"
         ],
         "summary": "Get Suggestion",
         "description": "Obtiene una sugerencia por su ID.",
-        "operationId": "get_suggestion_api_suggestions__suggestion_id__get",
+        "operationId": "get_suggestion_v1_suggestions__suggestion_id__get",
         "parameters": [
           {
             "name": "suggestion_id",
@@ -530,7 +530,7 @@
         ],
         "summary": "Update Suggestion",
         "description": "Actualiza una sugerencia.\n\n- **title**: Título de la sugerencia (opcional, 1-200 caracteres)\n- **description**: Descripción de la sugerencia (opcional, 1-1000 caracteres)",
-        "operationId": "update_suggestion_api_suggestions__suggestion_id__put",
+        "operationId": "update_suggestion_v1_suggestions__suggestion_id__put",
         "parameters": [
           {
             "name": "suggestion_id",
@@ -581,7 +581,7 @@
         ],
         "summary": "Delete Suggestion",
         "description": "Elimina una sugerencia por su ID.",
-        "operationId": "delete_suggestion_api_suggestions__suggestion_id__delete",
+        "operationId": "delete_suggestion_v1_suggestions__suggestion_id__delete",
         "parameters": [
           {
             "name": "suggestion_id",

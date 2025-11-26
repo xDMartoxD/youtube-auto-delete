@@ -37,7 +37,11 @@ class CookieSecurity(HTTPBearer):
 
     async def __call__(self, request: Request) -> HTTPAuthorizationCredentials:
         """Extract session token from cookie for documentation purposes."""
-        session_token = request.cookies.get("session_token", "session_token_required")
+        session_token = request.cookies.get("session_token")
+        # Return a placeholder for documentation if token is missing
+        # The actual validation happens in get_current_session
+        if not session_token:
+            session_token = ""
         return HTTPAuthorizationCredentials(scheme="Cookie", credentials=session_token)
 
 
@@ -85,8 +89,14 @@ async def get_current_session(
     session_cookie: HTTPAuthorizationCredentials = Depends(cookie_security),
 ) -> AsyncGenerator[SessionValidation, None]:
     credentials = session_cookie.credentials
-    if not credentials:
+    # Validate that we have a non-empty token before attempting to decode
+    if not credentials or credentials.strip() == "":
         raise AuthenticationFailedError(message="Session token not found in cookie")
+    
+    # Basic JWT format validation (should have 3 segments separated by dots)
+    if credentials.count(".") != 2:
+        logger.warning(f"Invalid JWT format: token has {credentials.count('.')} segments instead of 2")
+        raise AuthenticationFailedError(message="Invalid session token format")
 
     session = await auth_service.validate_and_refresh_session(credentials)
 

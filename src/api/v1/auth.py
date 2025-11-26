@@ -40,6 +40,14 @@ async def code_login(
         session_token, refresh_expires_at
     )
 
+    # Log cookie configuration for debugging
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(
+        f"Setting session cookie: key={cookie_data.key}, secure={cookie_data.secure}, samesite={cookie_data.samesite}, max_age={cookie_data.max_age}"
+    )
+
     response.set_cookie(**cookie_data.model_dump())
 
     return AuthSuccessResponse(
@@ -70,7 +78,7 @@ async def logout(
         path="/",
         httponly=True,
         secure=True,
-        samesite="strict",
+        samesite="none",  # Must match the cookie's SameSite attribute
     )
     return {"message": "Logged out successfully"}
 

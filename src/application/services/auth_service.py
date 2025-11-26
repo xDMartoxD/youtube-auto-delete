@@ -130,8 +130,8 @@ class AuthService:
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,
-            samesite="strict",
+            secure=True,  # Required when SameSite=None
+            samesite="none",  # Required for cross-origin POST requests (e.g., /auth/exchange)
             max_age=max_age,
             path="/",
         )

@@ -109,8 +109,29 @@ class AuthService:
         except (AuthenticationFailedError, ValueError) as e:
             logger.error(f"exchange_code failed: {e}")
             raise
-        except (httpx.HTTPStatusError, httpx.RequestError) as e:
-            logger.error(f"HTTP error in exchange_code: {e}")
+        except httpx.HTTPStatusError as e:
+            # The error details are already logged in google_client.py
+            # Extract more specific error message if available
+            error_message = "Failed to communicate with Google API"
+            try:
+                if e.response.status_code == 400:
+                    error_body = e.response.json()
+                    google_error = error_body.get("error", "")
+                    error_description = error_body.get("error_description", "")
+                    if "redirect_uri_mismatch" in google_error or "redirect_uri_mismatch" in error_description:
+                        error_message = "The redirect URI does not match the one registered in Google Console. Please verify the redirect_uri matches exactly (including protocol, domain, port, and path)."
+                    elif "invalid_grant" in google_error:
+                        error_message = "The authorization code is invalid or has expired. Please try logging in again."
+                    elif "invalid_client" in google_error:
+                        error_message = "Invalid Google OAuth client credentials. Please verify client_id and client_secret are correct."
+                    else:
+                        error_message = f"Google OAuth error: {error_description or google_error or 'Unknown error'}"
+            except Exception:
+                pass  # Use default error message if parsing fails
+            logger.error(f"HTTP error in exchange_code: {e.response.status_code} - {error_message}")
+            raise AuthenticationFailedError(message=error_message) from e
+        except httpx.RequestError as e:
+            logger.error(f"Request error in exchange_code: {e}")
             raise AuthenticationFailedError(message="Failed to communicate with Google API") from e
         except ValidationError as e:
             logger.error(f"Validation error in exchange_code: {e}")

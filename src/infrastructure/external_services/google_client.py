@@ -35,26 +35,49 @@ class GoogleClient:
         """
         if not code:
             raise ValueError("empty code")
+        
+        # Validate configuration
+        if not config.google_client_id:
+            logger.error("Google client_id is not configured")
+            raise AuthenticationFailedError(message="Google OAuth client_id is not configured")
+        if not config.google_client_secret:
+            logger.error("Google client_secret is not configured")
+            raise AuthenticationFailedError(message="Google OAuth client_secret is not configured")
+        
+        # Log request details (without sensitive data)
+        logger.info(f"Exchanging OAuth code with Google. redirect_uri={redirect_uri}, client_id={config.google_client_id[:20]}...")
 
-        resp = await self._client.post(
-            "https://oauth2.googleapis.com/token",
-            data={
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": redirect_uri,
-                "client_id": config.google_client_id,
-                "client_secret": config.google_client_secret,
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
-        resp.raise_for_status()
-        body = resp.json()
         try:
-            return GoogleAuthResponse.model_validate(body)
-        except ValidationError as e:
-            raise AuthenticationFailedError(
-                message="There was an error validating the response"
+            resp = await self._client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": redirect_uri,
+                    "client_id": config.google_client_id,
+                    "client_secret": config.google_client_secret,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
+            resp.raise_for_status()
+            body = resp.json()
+            try:
+                return GoogleAuthResponse.model_validate(body)
+            except ValidationError as e:
+                logger.error(f"Validation error parsing Google response: {e}")
+                raise AuthenticationFailedError(
+                    message="There was an error validating the response"
+                )
+        except httpx.HTTPStatusError as e:
+            # Log the error response from Google for debugging
+            error_detail = "Unknown error"
+            try:
+                error_body = e.response.json()
+                error_detail = error_body.get("error_description", error_body.get("error", str(error_body)))
+                logger.error(f"Google OAuth error {e.response.status_code}: {error_detail}. redirect_uri={redirect_uri}, client_id={config.google_client_id[:20]}...")
+            except Exception:
+                logger.error(f"Google OAuth error {e.response.status_code}: {e.response.text}")
+            raise
 
     async def decode_id_token(self, token: str) -> GoogleUserResponse:
         """

@@ -12,9 +12,16 @@ class IUserRepository(Protocol):
     El dominio define el contrato, la infraestructura lo implementa.
     """
 
-    @abstractmethod
-    async def save(self, user: UserAggregate) -> None:
-        """Guarda o actualiza un usuario."""
+    async def save(
+        self, user: UserAggregate, token_model: object | None = None
+    ) -> None:
+        """
+        Guarda o actualiza un usuario.
+        
+        Args:
+            user: User aggregate to save
+            token_model: Optional token model for initial insert
+        """
         ...
 
     @abstractmethod

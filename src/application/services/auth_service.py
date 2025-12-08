@@ -86,8 +86,8 @@ class AuthService:
             )
 
             # INFRASTRUCTURE: Save to database
-            # Insert TokenModel using the user repository
-            await self.user_repo.insert_token_model(token_model)
+            # Save user aggregate with token_model for initial insert
+            await self.user_repo.save(user, token_model=token_model)
 
             # INFRASTRUCTURE: Generate session token
             session_token = self.jwt_service.encode(
@@ -118,7 +118,10 @@ class AuthService:
                     error_body = e.response.json()
                     google_error = error_body.get("error", "")
                     error_description = error_body.get("error_description", "")
-                    if "redirect_uri_mismatch" in google_error or "redirect_uri_mismatch" in error_description:
+                    if (
+                        "redirect_uri_mismatch" in google_error
+                        or "redirect_uri_mismatch" in error_description
+                    ):
                         error_message = "The redirect URI does not match the one registered in Google Console. Please verify the redirect_uri matches exactly (including protocol, domain, port, and path)."
                     elif "invalid_grant" in google_error:
                         error_message = "The authorization code is invalid or has expired. Please try logging in again."
@@ -128,14 +131,20 @@ class AuthService:
                         error_message = f"Google OAuth error: {error_description or google_error or 'Unknown error'}"
             except Exception:
                 pass  # Use default error message if parsing fails
-            logger.error(f"HTTP error in exchange_code: {e.response.status_code} - {error_message}")
+            logger.error(
+                f"HTTP error in exchange_code: {e.response.status_code} - {error_message}"
+            )
             raise AuthenticationFailedError(message=error_message) from e
         except httpx.RequestError as e:
             logger.error(f"Request error in exchange_code: {e}")
-            raise AuthenticationFailedError(message="Failed to communicate with Google API") from e
+            raise AuthenticationFailedError(
+                message="Failed to communicate with Google API"
+            ) from e
         except ValidationError as e:
             logger.error(f"Validation error in exchange_code: {e}")
-            raise AuthenticationFailedError(message="Invalid response from Google API") from e
+            raise AuthenticationFailedError(
+                message="Invalid response from Google API"
+            ) from e
         except Exception as e:
             logger.exception("Unexpected error in exchange_code")
             raise YoutubeAutoDeleteApiError() from e
@@ -159,6 +168,7 @@ class AuthService:
 
     async def get_user_profile(self, access_token: str) -> GoogleUserResponse:
         """Get user profile from Google."""
+
         async def _fetch_profile() -> GoogleUserResponse:
             """Fetch user profile from Google."""
             # INFRASTRUCTURE: Get user info from Google
@@ -168,14 +178,18 @@ class AuthService:
             return GoogleUserResponse.from_user_info(
                 user_info=user_info_data,
                 iss="https://accounts.google.com",
-                aud=str(config.google_client_id) if config.google_client_id else "google",
+                aud=(
+                    str(config.google_client_id)
+                    if config.google_client_id
+                    else "google"
+                ),
                 iat=int(time.time()),
                 exp=int(time.time()) + 3600,  # 1 hour
             )
 
         # INFRASTRUCTURE: Get from cache or fetch
         cached_result = await self.cache_service.get("user_profile", access_token)
-        
+
         if cached_result:
             return GoogleUserResponse(**cached_result)
 
@@ -187,7 +201,7 @@ class AuthService:
             expire=config.cache_ttl_user_profile,
             access_token=access_token,
         )
-        
+
         return result
 
     async def validate_and_refresh_session(
@@ -225,7 +239,9 @@ class AuthService:
             raise AuthenticationFailedError(message="Invalid session token") from e
         except KeyError as e:
             logger.error(f"Missing key in session validation: {e}")
-            raise AuthenticationFailedError(message="Invalid session token format") from e
+            raise AuthenticationFailedError(
+                message="Invalid session token format"
+            ) from e
         except Exception as e:
             logger.error(f"Unexpected error in session validation: {e}")
             raise AuthenticationFailedError(message="Authentication error") from e
@@ -270,9 +286,10 @@ class AuthService:
                 await self.user_repo.update_token(user.user_id, update_data)  # type: ignore
 
             # INFRASTRUCTURE: Generate new session token
-            new_refresh_expires_at = (
-                int(time.time()) + refresh_response.refresh_token_expires_in
-            )
+            # Google doesn't always return refresh_token_expires_in
+            # Use default of 6 months (15,552,000 seconds) if not provided
+            refresh_expires_in = refresh_response.refresh_token_expires_in or 15_552_000
+            new_refresh_expires_at = int(time.time()) + refresh_expires_in
             new_session_token = self.jwt_service.encode(
                 user_id=user.user_id,
                 expires_at=new_refresh_expires_at,
@@ -302,13 +319,23 @@ class AuthService:
             raise
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
             logger.error(f"HTTP error refreshing token for user {user.user_id}: {e}")
-            raise AuthenticationFailedError(message="Failed to communicate with Google API") from e
+            raise AuthenticationFailedError(
+                message="Failed to communicate with Google API"
+            ) from e
         except ValidationError as e:
-            logger.error(f"Validation error refreshing token for user {user.user_id}: {e}")
-            raise AuthenticationFailedError(message="Invalid response from Google API") from e
+            logger.error(
+                f"Validation error refreshing token for user {user.user_id}: {e}"
+            )
+            raise AuthenticationFailedError(
+                message="Invalid response from Google API"
+            ) from e
         except Exception as e:
-            logger.error(f"Unexpected error refreshing token for user {user.user_id}: {e}")
-            raise AuthenticationFailedError(message="Failed to refresh access token") from e
+            logger.error(
+                f"Unexpected error refreshing token for user {user.user_id}: {e}"
+            )
+            raise AuthenticationFailedError(
+                message="Failed to refresh access token"
+            ) from e
 
     def _return_current_token(
         self, session: Session, user_sub: str, session_id: str
@@ -336,7 +363,9 @@ class AuthService:
             # INFRASTRUCTURE: Revoke token with Google
             await self.client.revoke_access_token(session["access_token"])
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
-            logger.warning(f"HTTP error revoking token for user {session['user_sub']}: {e}")
+            logger.warning(
+                f"HTTP error revoking token for user {session['user_sub']}: {e}"
+            )
             # Continue with logout even if revoke fails
         except Exception as e:
             logger.error(f"Failed to logout user {session['user_sub']}: {e}")

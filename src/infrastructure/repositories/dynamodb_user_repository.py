@@ -28,8 +28,17 @@ class DynamoDBUserRepository(BaseRepository[TokenModel], IUserRepository):
         """Prepare TokenModel for DynamoDB."""
         return item.to_item()
 
-    async def save(self, user: UserAggregate) -> None:
-        """Save or update a user aggregate."""
+    async def save(
+        self, user: UserAggregate, token_model: TokenModel | None = None
+    ) -> None:
+        """
+        Save or update a user aggregate.
+        
+        Args:
+            user: User aggregate to save
+            token_model: Optional TokenModel for initial insert. If not provided,
+                        will look for existing token to update.
+        """
         if not user.session:
             raise ValueError("Cannot save user without session")
 
@@ -39,11 +48,14 @@ class DynamoDBUserRepository(BaseRepository[TokenModel], IUserRepository):
         if existing_token:
             # Update existing token
             token_model = UserMapper.to_persistence(user, existing_token)
+        elif token_model:
+            # Initial insert: use provided token_model and update with session data
+            token_model = UserMapper.to_persistence(user, token_model)
         else:
-            # This shouldn't happen in normal flow - user should be created with TokenModel.from_dto first
+            # No existing token and no token_model provided
             raise ValueError(
-                "Cannot save user without existing TokenModel. "
-                "Create TokenModel first using from_dto() method."
+                "Cannot save user without existing TokenModel or provided token_model. "
+                "Either provide token_model for initial insert, or ensure token exists."
             )
 
         await self.insert(token_model)

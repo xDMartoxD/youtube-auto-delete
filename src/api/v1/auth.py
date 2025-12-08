@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, status, Response
 
 from src.api.deps import (
     auth_service_dependency,
@@ -7,10 +7,8 @@ from src.api.deps import (
 from src.schemas.auth import (
     GoogleCodeLogin,
     AuthSuccessResponse,
-    SessionValidation,
     UserInfo,
 )
-
 
 router = APIRouter()
 
@@ -32,10 +30,7 @@ async def code_login(
     Retorna información del usuario autenticado y establece una cookie de sesión.
     """
     # Log incoming request for debugging
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"Received OAuth exchange request. redirect_uri={google_code_login.redirect_uri}, code_length={len(google_code_login.code) if google_code_login.code else 0}")
-    
+
     user_data, session_token, refresh_expires_at = await auth_service.exchange_code(
         google_code_login.code, google_code_login.redirect_uri
     )

@@ -7,8 +7,9 @@ class GoogleAuthResponse(BaseModel):
     refresh_token: str | None = None
     expires_in: int
     token_type: str
-    refresh_token_expires_in: int
+    refresh_token_expires_in: int | None = None
     id_token: str
+    scope: str | None = None
 
     model_config = {"extra": "allow"}
 

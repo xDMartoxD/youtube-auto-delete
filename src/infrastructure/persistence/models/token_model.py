@@ -38,7 +38,9 @@ class TokenModel:
         issued_at = user_dto.iat
 
         expires_in = auth_dto.expires_in
-        refresh_token_expires_in = auth_dto.refresh_token_expires_in
+        # Google doesn't always return refresh_token_expires_in
+        # Use default of 6 months (15,552,000 seconds) if not provided
+        refresh_token_expires_in = auth_dto.refresh_token_expires_in or 15_552_000
 
         expires_at = issued_at + expires_in
         refresh_expires_at = issued_at + refresh_token_expires_in

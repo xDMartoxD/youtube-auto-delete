@@ -35,17 +35,23 @@ class GoogleClient:
         """
         if not code:
             raise ValueError("empty code")
-        
+
         # Validate configuration
         if not config.google_client_id:
             logger.error("Google client_id is not configured")
-            raise AuthenticationFailedError(message="Google OAuth client_id is not configured")
+            raise AuthenticationFailedError(
+                message="Google OAuth client_id is not configured"
+            )
         if not config.google_client_secret:
             logger.error("Google client_secret is not configured")
-            raise AuthenticationFailedError(message="Google OAuth client_secret is not configured")
-        
+            raise AuthenticationFailedError(
+                message="Google OAuth client_secret is not configured"
+            )
+
         # Log request details (without sensitive data)
-        logger.info(f"Exchanging OAuth code with Google. redirect_uri={redirect_uri}, client_id={config.google_client_id[:20]}...")
+        logger.info(
+            f"Exchanging OAuth code with Google. redirect_uri={redirect_uri}, client_id={config.google_client_id[:20]}..."
+        )
 
         try:
             resp = await self._client.post(
@@ -73,10 +79,16 @@ class GoogleClient:
             error_detail = "Unknown error"
             try:
                 error_body = e.response.json()
-                error_detail = error_body.get("error_description", error_body.get("error", str(error_body)))
-                logger.error(f"Google OAuth error {e.response.status_code}: {error_detail}. redirect_uri={redirect_uri}, client_id={config.google_client_id[:20]}...")
+                error_detail = error_body.get(
+                    "error_description", error_body.get("error", str(error_body))
+                )
+                logger.error(
+                    f"Google OAuth error {e.response.status_code}: {error_detail}. redirect_uri={redirect_uri}, client_id={config.google_client_id[:20]}..."
+                )
             except Exception:
-                logger.error(f"Google OAuth error {e.response.status_code}: {e.response.text}")
+                logger.error(
+                    f"Google OAuth error {e.response.status_code}: {e.response.text}"
+                )
             raise
 
     async def decode_id_token(self, token: str) -> GoogleUserResponse:
@@ -184,4 +196,3 @@ class GoogleClient:
 
     async def __aexit__(self, exc_type, exc, tb):
         await self.close()
-

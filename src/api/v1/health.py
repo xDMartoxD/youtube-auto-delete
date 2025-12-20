@@ -24,7 +24,7 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0",
-        "service": "youtube-auto-delete-api",
+        "service": "playlistmaster-api",
     }
 
 
@@ -37,7 +37,7 @@ async def detailed_health_check():
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0",
-        "service": "youtube-auto-delete-api",
+        "service": "playlistmaster-api",
         "checks": {},
     }
 
@@ -108,7 +108,7 @@ async def readiness_check():
         return {
             "status": "ready",
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "service": "youtube-auto-delete-api",
+            "service": "playlistmaster-api",
         }
     except (ValueError, KeyError) as e:
         logger.error(f"Readiness check validation error: {e}")

@@ -4,50 +4,55 @@ API backend para gestionar y eliminar videos de playlists de YouTube automática
 
 ## 🚀 Características
 
-- **Autenticación OAuth con Google**: Integración completa con Google OAuth 2.0
-- **Gestión de Playlists**: Obtener y filtrar videos de playlists de YouTube
-- **Filtrado por Fechas**: Filtrar videos agregados a playlists en rangos de fechas específicos
-- **Caché Inteligente**: Sistema de caché con Redis/Valkey para optimizar rendimiento
-- **Rate Limiting**: Protección contra abuso con límites de requests por IP
-- **Arquitectura Limpia**: Separación clara de responsabilidades (Domain, Application, Infrastructure)
-- **Documentación API**: OpenAPI/Swagger automática
-- **Tests**: Suite completa de tests unitarios e integración
+-   **Autenticación OAuth con Google**: Integración completa con Google OAuth 2.0
+-   **Gestión de Playlists**: Obtener y filtrar videos de playlists de YouTube
+-   **Filtrado por Fechas**: Filtrar videos agregados a playlists en rangos de fechas específicos
+-   **Caché Inteligente**: Sistema de caché con Redis/Valkey para optimizar rendimiento
+-   **Rate Limiting**: Protección contra abuso con límites de requests por IP
+-   **Arquitectura Limpia**: Separación clara de responsabilidades (Domain, Application, Infrastructure)
+-   **Documentación API**: OpenAPI/Swagger automática
+-   **Tests**: Suite completa de tests unitarios e integración
 
 ## 📋 Requisitos Previos
 
-- Python 3.11+
-- Docker y Docker Compose (para desarrollo local)
-- Cuenta de Google Cloud con OAuth 2.0 configurado
-- AWS Account (para producción con DynamoDB y ElastiCache)
+-   Python 3.11+
+-   Docker y Docker Compose (para desarrollo local)
+-   Cuenta de Google Cloud con OAuth 2.0 configurado
+-   AWS Account (para producción con DynamoDB y ElastiCache)
 
 ## 🛠️ Instalación
 
 ### Desarrollo Local
 
 1. **Clonar el repositorio**
+
 ```bash
 git clone <repository-url>
-cd youtube-auto-delete/backend
+cd playlistmaster/backend
 ```
 
 2. **Configurar variables de entorno**
+
 ```bash
 cp .env.example .env
 # Editar .env con tus credenciales
 ```
 
 3. **Iniciar servicios con Docker Compose**
+
 ```bash
 docker-compose up -d
 ```
 
 Esto iniciará:
-- FastAPI en `http://localhost:8080`
-- DynamoDB Local en `http://localhost:8000`
-- DynamoDB Admin UI en `http://localhost:8001`
-- Valkey (Redis-compatible) en `localhost:6379`
+
+-   FastAPI en `http://localhost:8080`
+-   DynamoDB Local en `http://localhost:8000`
+-   DynamoDB Admin UI en `http://localhost:8001`
+-   Valkey (Redis-compatible) en `localhost:6379`
 
 4. **Instalar dependencias (desarrollo local)**
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
@@ -55,6 +60,7 @@ pip install -r requirements.txt
 ```
 
 5. **Ejecutar la aplicación**
+
 ```bash
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8080
 ```
@@ -99,9 +105,9 @@ RATE_LIMIT_PER_HOUR=1000
 
 Una vez que la aplicación esté corriendo, accede a:
 
-- **Swagger UI**: `http://localhost:8080/docs`
-- **ReDoc**: `http://localhost:8080/redoc`
-- **OpenAPI JSON**: `http://localhost:8080/openapi.json`
+-   **Swagger UI**: `http://localhost:8080/docs`
+-   **ReDoc**: `http://localhost:8080/redoc`
+-   **OpenAPI JSON**: `http://localhost:8080/openapi.json`
 
 ## 🏗️ Arquitectura
 
@@ -123,16 +129,19 @@ Para más detalles, consulta [ARCHITECTURE.md](./ARCHITECTURE.md).
 ## 🧪 Testing
 
 ### Ejecutar todos los tests
+
 ```bash
 pytest
 ```
 
 ### Con cobertura
+
 ```bash
 pytest --cov=src --cov-report=html
 ```
 
 ### Tests específicos
+
 ```bash
 # Tests unitarios
 pytest tests/unit/
@@ -166,26 +175,29 @@ backend/
 La API usa autenticación basada en cookies HTTP-only:
 
 1. **Login**: `POST /api/auth/exchange`
-   - Intercambia código OAuth de Google por tokens
-   - Establece cookie `session_token` (HTTP-only, Secure, SameSite=Strict)
+
+    - Intercambia código OAuth de Google por tokens
+    - Establece cookie `session_token` (HTTP-only, Secure, SameSite=Strict)
 
 2. **Endpoints protegidos**: Requieren cookie de sesión válida
-   - La sesión se refresca automáticamente si es necesario
+
+    - La sesión se refresca automáticamente si es necesario
 
 3. **Logout**: `POST /api/auth/logout`
-   - Revoca tokens y elimina cookie
+    - Revoca tokens y elimina cookie
 
 ## 🚦 Rate Limiting
 
 La API implementa rate limiting por IP:
-- **Por minuto**: 60 requests (configurable)
-- **Por hora**: 1000 requests (configurable)
-- **Excepciones**: Health checks (`/api/health`) no están limitados
+
+-   **Por minuto**: 60 requests (configurable)
+-   **Por hora**: 1000 requests (configurable)
+-   **Excepciones**: Health checks (`/api/health`) no están limitados
 
 ## 💾 Persistencia
 
-- **DynamoDB**: Almacenamiento principal de usuarios y tokens
-- **Redis/Valkey**: Caché para optimizar respuestas de la API de YouTube
+-   **DynamoDB**: Almacenamiento principal de usuarios y tokens
+-   **Redis/Valkey**: Caché para optimizar respuestas de la API de YouTube
 
 ## 🔄 Flujo de Datos
 
@@ -202,19 +214,22 @@ Request → Middleware (CORS, Rate Limit) → Router → Application Service
 ## 🐳 Docker
 
 ### Desarrollo
+
 ```bash
 docker-compose up -d
 ```
 
 ### Producción
+
 ```bash
-docker build -f docker/Dockerfile.prod -t youtube-auto-delete-api .
-docker run -p 8080:80 --env-file .env youtube-auto-delete-api
+docker build -f docker/Dockerfile.prod -t playlistmaster-api .
+docker run -p 8080:80 --env-file .env playlistmaster-api
 ```
 
 ## 📝 Scripts Útiles
 
 ### Generar OpenAPI schema
+
 ```bash
 python scripts/generate_openapi.py
 ```
@@ -234,16 +249,19 @@ Este proyecto está bajo la Licencia MIT - ver el archivo LICENSE para más deta
 ## 🐛 Troubleshooting
 
 ### Redis no conecta
-- Verifica que Valkey/Redis esté corriendo: `docker ps`
-- Revisa logs: `docker-compose logs valkey`
+
+-   Verifica que Valkey/Redis esté corriendo: `docker ps`
+-   Revisa logs: `docker-compose logs valkey`
 
 ### DynamoDB no conecta
-- Verifica que DynamoDB Local esté corriendo: `docker ps`
-- Accede al admin UI: `http://localhost:8001`
+
+-   Verifica que DynamoDB Local esté corriendo: `docker ps`
+-   Accede al admin UI: `http://localhost:8001`
 
 ### Errores de autenticación
-- Verifica que `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` estén correctos
-- Asegúrate de que el redirect_uri esté configurado en Google Console
+
+-   Verifica que `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` estén correctos
+-   Asegúrate de que el redirect_uri esté configurado en Google Console
 
 ## 📞 Soporte
 

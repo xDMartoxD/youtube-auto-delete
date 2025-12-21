@@ -20,7 +20,7 @@ class TestHealthEndpoints:
         assert data["status"] == "healthy"
         assert "timestamp" in data
         assert data["version"] == "1.0.0"
-        assert data["service"] == "playlistmaster-api"
+        assert data["service"] == "playlisstmaster-api"
 
     def test_health_check_detailed(self, client: TestClient):
         """Test del health check detallado."""

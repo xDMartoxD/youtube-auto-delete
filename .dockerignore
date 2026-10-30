@@ -24,4 +24,5 @@ docker-compose.yaml
 node_modules
 
 # Do NOT ignore the root Dockerfile used to build the image
-# (remove any line like '**/Dockerfile' that would exclude it)
+# (remove any line like '**/Dockerfile' that would exclude it)*.env
+client_secret*.json

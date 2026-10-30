@@ -11,6 +11,7 @@ from src.core.config import config
 from src.core.exceptions import AuthenticationFailedError
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from google.auth.exceptions import RefreshError
 import httpx
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -128,7 +129,8 @@ class GoogleClient:
             service = build("oauth2", "v2", credentials=creds)
             user_info = service.userinfo().get().execute()
             return GoogleUserInfo.model_validate(user_info)
-        except HttpError as e:
+        except (HttpError, RefreshError) as e:
+            # RefreshError: Google rejected the access token (expired or revoked)
             raise AuthenticationFailedError(message="Google API error: " + str(e))
         except ValidationError as e:
             raise AuthenticationFailedError(

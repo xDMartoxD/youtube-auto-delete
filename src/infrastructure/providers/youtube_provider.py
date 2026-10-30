@@ -1,11 +1,13 @@
 """YouTube / YouTube Music provider backed by the YouTube Data API."""
 
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Protocol
+from typing import Any, Iterator, Protocol
 
+from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 
-from src.core.exceptions import ProviderRequestError
+from src.core.exceptions import AuthenticationFailedError, ProviderRequestError
 from src.domain.entities.playlist import Playlist, Track
 from src.domain.providers import PlaylistProvider, ProviderType
 from src.schemas.youtube import PlaylistItemVideo
@@ -61,6 +63,24 @@ def _parse_datetime(value: str | None) -> datetime | None:
         return None
 
 
+@contextmanager
+def _youtube_errors_as_api_errors() -> Iterator[None]:
+    """Map Google client failures to application exceptions."""
+    try:
+        yield
+    except RefreshError as e:
+        # Google rejected the access token (expired or revoked)
+        raise AuthenticationFailedError(
+            message=f"YouTube credentials rejected: {e}",
+            user_message="Your Google session expired, please sign in again",
+        )
+    except HttpError as e:
+        raise ProviderRequestError(
+            message=f"YouTube API error: {e}",
+            user_message="YouTube returned an error, please try again",
+        )
+
+
 class YoutubePlaylistProvider(PlaylistProvider):
     """
     Adapter from the PlaylistProvider port to the YouTube Data API.
@@ -76,36 +96,32 @@ class YoutubePlaylistProvider(PlaylistProvider):
         self.provider_type = provider_type
 
     async def list_playlists(self) -> list[Playlist]:
-        try:
+        with _youtube_errors_as_api_errors():
             resources = await self._youtube.get_all_user_playlists()
-        except HttpError as e:
-            raise ProviderRequestError(message=f"YouTube API error: {e}")
         return [self._to_playlist(resource) for resource in resources]
 
     async def get_tracks(self, playlist_id: str) -> list[Track]:
-        try:
+        with _youtube_errors_as_api_errors():
             items = await self._youtube.get_all_playlist_items(playlist_id)
-        except HttpError as e:
-            raise ProviderRequestError(message=f"YouTube API error: {e}")
         return [self._to_track(item) for item in items]
 
     async def remove_tracks(self, playlist_id: str, item_ids: list[str]) -> int:
-        return await self._youtube.delete_playlist_videos(
-            playlist_id,
-            include_private_videos=False,
-            include_delete_videos=False,
-            item_ids=item_ids,
-        )
+        with _youtube_errors_as_api_errors():
+            return await self._youtube.delete_playlist_videos(
+                playlist_id,
+                include_private_videos=False,
+                include_delete_videos=False,
+                item_ids=item_ids,
+            )
 
     async def create_playlist(self, name: str, description: str) -> Playlist:
-        try:
+        with _youtube_errors_as_api_errors():
             resource = await self._youtube.create_playlist(name, description)
-        except HttpError as e:
-            raise ProviderRequestError(message=f"YouTube API error: {e}")
         return self._to_playlist(resource)
 
     async def add_tracks(self, playlist_id: str, track_ids: list[str]) -> int:
-        return await self._youtube.add_videos_to_playlist(playlist_id, track_ids)
+        with _youtube_errors_as_api_errors():
+            return await self._youtube.add_videos_to_playlist(playlist_id, track_ids)
 
     def _to_playlist(self, resource: dict[str, Any]) -> Playlist:
         snippet = resource.get("snippet") or {}

@@ -568,7 +568,7 @@ class YoutubeService:
         include_private_videos: bool,
         include_delete_videos: bool,
         item_ids: list[str] | None = None,
-    ) -> None:
+    ) -> int:
         """
         Delete videos from a playlist.
         Invalidates relevant cache entries after deletion.
@@ -579,6 +579,9 @@ class YoutubeService:
             include_delete_videos: If True, include deleted videos in deletion
             item_ids: Optional list of playlist item IDs to delete. If provided,
                      these items will be deleted in addition to any filtered items
+
+        Returns:
+            Number of successfully deleted items
         """
         self._ensure_initialized()
 
@@ -598,13 +601,18 @@ class YoutubeService:
             items_to_delete.extend(filtered_items)
 
         # Delete items if any
+        deleted_count = 0
         if items_to_delete:
             deleted_count = await self._delete_items_batch(playlist_id, items_to_delete)
             logger.info(
                 f"Deleted {deleted_count} out of {len(items_to_delete)} items from playlist {playlist_id}"
             )
 
-        # INFRASTRUCTURE: Invalidate cache for this playlist
+        await self._invalidate_playlist_cache(playlist_id)
+        return deleted_count
+
+    async def _invalidate_playlist_cache(self, playlist_id: str) -> None:
+        """Invalidate cached videos of a playlist and the user's playlist list."""
         # Since cache keys are sorted alphabetically, playlist_id may appear in different positions
         # Use filter-based invalidation to find all keys containing this playlist_id
         playlist_id_pattern = f":playlist_id:{playlist_id}"
@@ -612,3 +620,97 @@ class YoutubeService:
             key_prefixes=["playlist_videos:*", "playlist_videos_by_date:*"],
             filter_func=lambda key: playlist_id_pattern in key,
         )
+        user_id_pattern = f":user_id:{self._user_id}"
+        await self.cache_service.invalidate_by_filter(
+            key_prefixes=["user_playlists:*"],
+            filter_func=lambda key: user_id_pattern in key,
+        )
+
+    def is_unavailable_video(self, item: PlaylistItemVideo) -> bool:
+        """True if the playlist entry points to a deleted or private video."""
+        return self._is_deleted_video(item) or self._is_private_video(item)
+
+    async def get_all_playlist_items(self, playlist_id: str) -> list[PlaylistItemVideo]:
+        """Get every item of a playlist, across all pages."""
+        self._ensure_initialized()
+        return await self._fetch_all_playlist_pages(playlist_id)
+
+    async def get_all_user_playlists(self) -> list[dict[str, Any]]:
+        """Get every playlist of the user as raw YouTube API resources."""
+        self._ensure_initialized()
+        playlists: list[dict[str, Any]] = []
+        next_page_token = None
+
+        while True:
+            request_params = {
+                "part": API_PART_SNIPPET_CONTENT,
+                "mine": True,
+                "maxResults": MAX_RESULTS_PER_PAGE,
+            }
+            if next_page_token:
+                request_params["pageToken"] = next_page_token
+
+            response = await self._execute_youtube_request(
+                lambda: self._youtube_client.playlists().list(**request_params)
+            )
+            playlists.extend(response.get("items", []))
+
+            next_page_token = response.get("nextPageToken")
+            if not next_page_token:
+                break
+
+        return playlists
+
+    async def create_playlist(
+        self, title: str, description: str = "", privacy_status: str = "private"
+    ) -> dict[str, Any]:
+        """Create a playlist and return the raw YouTube API resource."""
+        self._ensure_initialized()
+        body = {
+            "snippet": {"title": title, "description": description},
+            "status": {"privacyStatus": privacy_status},
+        }
+        playlist = await self._execute_youtube_request(
+            lambda: self._youtube_client.playlists().insert(
+                part="snippet,status,contentDetails", body=body
+            )
+        )
+        await self._invalidate_playlist_cache(playlist["id"])
+        return playlist
+
+    async def add_videos_to_playlist(
+        self, playlist_id: str, video_ids: list[str]
+    ) -> int:
+        """
+        Append videos to a playlist.
+
+        Inserts run sequentially: concurrent inserts into the same playlist are
+        rejected by YouTube and would also scramble the order.
+
+        Returns:
+            Number of videos added
+        """
+        self._ensure_initialized()
+        added = 0
+        for video_id in video_ids:
+            body = {
+                "snippet": {
+                    "playlistId": playlist_id,
+                    "resourceId": {"kind": "youtube#video", "videoId": video_id},
+                }
+            }
+            try:
+                await self._execute_youtube_request(
+                    lambda: self._youtube_client.playlistItems().insert(
+                        part="snippet", body=body
+                    )
+                )
+                added += 1
+            except HttpError as e:
+                # A single unavailable video should not abort the whole operation
+                logger.warning(
+                    f"Failed to add video {video_id} to playlist {playlist_id}: {e}"
+                )
+
+        await self._invalidate_playlist_cache(playlist_id)
+        return added

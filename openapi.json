@@ -109,7 +109,7 @@
           "health"
         ],
         "summary": "Health Check",
-        "description": "Endpoint de health check básico.",
+        "description": "Endpoint de health check básico (liveness).\nRetorna 200 OK si el proceso está vivo.\nUsado por ECS/Kubernetes para liveness probes.",
         "operationId": "health_check_v1_health__get",
         "responses": {
           "200": {
@@ -169,7 +169,7 @@
           "health"
         ],
         "summary": "Readiness Check",
-        "description": "Endpoint de readiness check para Kubernetes.",
+        "description": "Endpoint de readiness check para Kubernetes/ECS.\nRetorna 200 OK si el servicio está listo para recibir tráfico.\nRetorna 503 si el servicio no está listo (dependencias no disponibles).\nUsado por Kubernetes readiness probes y ECS health checks.",
         "operationId": "readiness_check_v1_health_ready_get",
         "responses": {
           "200": {
@@ -609,6 +609,314 @@
           }
         }
       }
+    },
+    "/v1/providers": {
+      "get": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "List Providers",
+        "description": "List supported providers and whether each one serves demo data.",
+        "operationId": "list_providers_v1_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Session Cookie": []
+          }
+        ]
+      }
+    },
+    "/v1/providers/{provider}/playlists": {
+      "get": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "List Playlists",
+        "description": "Get every playlist of the user on a provider.",
+        "operationId": "list_playlists_v1_providers__provider__playlists_get",
+        "security": [
+          {
+            "Session Cookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Create Playlist From Sources",
+        "description": "Create a new playlist by combining other playlists (union, intersection, difference).",
+        "operationId": "create_playlist_from_sources_v1_providers__provider__playlists_post",
+        "security": [
+          {
+            "Session Cookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlaylistFromSourcesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOperationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/providers/{provider}/playlists/{playlist_id}/tracks": {
+      "get": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Get Playlist Tracks",
+        "description": "Get all tracks of a playlist, flagging repeated entries.",
+        "operationId": "get_playlist_tracks_v1_providers__provider__playlists__playlist_id__tracks_get",
+        "security": [
+          {
+            "Session Cookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          },
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Playlist Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/providers/{provider}/playlists/{playlist_id}/tracks/remove": {
+      "post": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Remove Playlist Tracks",
+        "description": "Remove several entries from a playlist at once.",
+        "operationId": "remove_playlist_tracks_v1_providers__provider__playlists__playlist_id__tracks_remove_post",
+        "security": [
+          {
+            "Session Cookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          },
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Playlist Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveTracksRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveTracksResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/providers/{provider}/playlists/merge": {
+      "post": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Merge Playlists",
+        "description": "Copy the tracks of several playlists into an existing or a new playlist.",
+        "operationId": "merge_playlists_v1_providers__provider__playlists_merge_post",
+        "security": [
+          {
+            "Session Cookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergePlaylistsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOperationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -636,6 +944,16 @@
         "title": "AuthSuccessResponse",
         "description": "Successful authentication response."
       },
+      "CompositionMode": {
+        "type": "string",
+        "enum": [
+          "union",
+          "intersection",
+          "difference"
+        ],
+        "title": "CompositionMode",
+        "description": "How source playlists are combined into a new one."
+      },
       "ContentDetails": {
         "properties": {
           "videoId": {
@@ -662,6 +980,48 @@
         ],
         "title": "ContentDetails",
         "description": "Video content details."
+      },
+      "CreatePlaylistFromSourcesRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Description",
+            "default": ""
+          },
+          "source_playlist_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Source Playlist Ids"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/CompositionMode",
+            "description": "union: all tracks; intersection: tracks in every source; difference: tracks of the first source not in the others",
+            "default": "union"
+          },
+          "remove_duplicates": {
+            "type": "boolean",
+            "title": "Remove Duplicates",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "source_playlist_ids"
+        ],
+        "title": "CreatePlaylistFromSourcesRequest"
       },
       "DeletePlaylistVideosRequest": {
         "properties": {
@@ -728,6 +1088,56 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "MergePlaylistsRequest": {
+        "properties": {
+          "source_playlist_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Source Playlist Ids"
+          },
+          "target_playlist_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Playlist Id",
+            "description": "Existing playlist that receives the tracks"
+          },
+          "new_playlist_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 150,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Playlist Name",
+            "description": "Create a new playlist instead"
+          },
+          "remove_duplicates": {
+            "type": "boolean",
+            "title": "Remove Duplicates",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_playlist_ids"
+        ],
+        "title": "MergePlaylistsRequest"
       },
       "PageInfo": {
         "properties": {
@@ -1034,6 +1444,93 @@
         "title": "PlaylistItemVideo",
         "description": "Complete item of a video in a playlist."
       },
+      "PlaylistListResponse": {
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/ProviderType"
+          },
+          "playlists": {
+            "items": {
+              "$ref": "#/components/schemas/PlaylistResponse"
+            },
+            "type": "array",
+            "title": "Playlists"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "playlists"
+        ],
+        "title": "PlaylistListResponse"
+      },
+      "PlaylistOperationResponse": {
+        "properties": {
+          "playlist": {
+            "$ref": "#/components/schemas/PlaylistResponse"
+          },
+          "added_count": {
+            "type": "integer",
+            "title": "Added Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "playlist",
+          "added_count"
+        ],
+        "title": "PlaylistOperationResponse"
+      },
+      "PlaylistResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "track_count": {
+            "type": "integer",
+            "title": "Track Count",
+            "default": 0
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "PlaylistResponse"
+      },
       "PlaylistSnippet": {
         "properties": {
           "title": {
@@ -1155,6 +1652,96 @@
         ],
         "title": "PlaylistVideoResponse",
         "description": "Paginated response of playlist videos with complete schemas."
+      },
+      "ProviderInfo": {
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ProviderType",
+            "description": "Provider identifier"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Display name"
+          },
+          "is_mock": {
+            "type": "boolean",
+            "title": "Is Mock",
+            "description": "True when the provider serves demo data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "is_mock"
+        ],
+        "title": "ProviderInfo"
+      },
+      "ProviderListResponse": {
+        "properties": {
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderInfo"
+            },
+            "type": "array",
+            "title": "Providers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "providers"
+        ],
+        "title": "ProviderListResponse"
+      },
+      "ProviderType": {
+        "type": "string",
+        "enum": [
+          "youtube",
+          "youtube_music",
+          "spotify",
+          "apple_music",
+          "amazon_music"
+        ],
+        "title": "ProviderType",
+        "description": "Identifier of each music/video service the app can manage playlists for."
+      },
+      "RemoveTracksRequest": {
+        "properties": {
+          "item_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Item Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item_ids"
+        ],
+        "title": "RemoveTracksRequest"
+      },
+      "RemoveTracksResponse": {
+        "properties": {
+          "removed_count": {
+            "type": "integer",
+            "title": "Removed Count"
+          },
+          "requested_count": {
+            "type": "integer",
+            "title": "Requested Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "removed_count",
+          "requested_count"
+        ],
+        "title": "RemoveTracksResponse"
       },
       "ResourceId": {
         "properties": {
@@ -1386,6 +1973,124 @@
         "type": "object",
         "title": "Thumbnails",
         "description": "All available thumbnails for a video."
+      },
+      "TrackListResponse": {
+        "properties": {
+          "playlist_id": {
+            "type": "string",
+            "title": "Playlist Id"
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/TrackResponse"
+            },
+            "type": "array",
+            "title": "Tracks"
+          },
+          "duplicate_item_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Duplicate Item Ids",
+            "description": "Entries that repeat a track already earlier in the playlist"
+          }
+        },
+        "type": "object",
+        "required": [
+          "playlist_id",
+          "tracks",
+          "duplicate_item_ids"
+        ],
+        "title": "TrackListResponse"
+      },
+      "TrackResponse": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id",
+            "description": "Entry id inside the playlist (use it to remove)"
+          },
+          "track_id": {
+            "type": "string",
+            "title": "Track Id",
+            "description": "Song/video id in the provider catalog"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "artist": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artist"
+          },
+          "album": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Album"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "added_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Added At",
+            "description": "When it was added to the playlist"
+          },
+          "is_available": {
+            "type": "boolean",
+            "title": "Is Available",
+            "description": "False for deleted/private tracks",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "track_id",
+          "title"
+        ],
+        "title": "TrackResponse"
       },
       "UserInfo": {
         "properties": {

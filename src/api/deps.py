@@ -9,6 +9,9 @@ from src.schemas.auth import SessionValidation
 from src.application.services.youtube_service import YoutubeService
 from src.application.services.auth_service import AuthService
 from src.application.services.suggestions_service import SuggestionsService
+from src.application.services.playlist_management_service import (
+    PlaylistManagementService,
+)
 from src.infrastructure.external_services.google_client import GoogleClient
 from src.infrastructure.repositories.dynamodb_user_repository import (
     DynamoDBUserRepository,
@@ -19,6 +22,10 @@ from src.infrastructure.repositories.dynamodb_suggestion_repository import (
 from src.domain.services.session_service import SessionService
 from src.domain.services.video_filter_service import VideoFilterService
 from src.domain.services.suggestion_service import SuggestionService
+from src.domain.services.playlist_composition_service import (
+    PlaylistCompositionService,
+)
+from src.infrastructure.providers import build_providers
 from src.infrastructure.services.jwt_service import JWTService
 from src.infrastructure.services.cache_service import CacheService
 
@@ -166,4 +173,25 @@ def get_suggestions_service(
 
 suggestions_service_dependency = Annotated[
     SuggestionsService, Depends(get_suggestions_service)
+]
+
+
+async def get_playlist_management_service(
+    session: current_session_dependency,
+    youtube_service: youtube_service_dependency,
+) -> AsyncGenerator[PlaylistManagementService, None]:
+    """Create the multi-provider playlist service for the authenticated user."""
+    providers = build_providers(youtube_service, session["user_sub"])
+    svc = PlaylistManagementService(
+        providers=providers,
+        composition_service=PlaylistCompositionService(),
+    )
+    try:
+        yield svc
+    finally:
+        pass
+
+
+playlist_management_service_dependency = Annotated[
+    PlaylistManagementService, Depends(get_playlist_management_service)
 ]

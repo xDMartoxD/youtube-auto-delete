@@ -122,3 +122,31 @@ class LogoutFailedError(YoutubeAutoDeleteApiError):
     """Failed to logout user"""
 
     pass
+
+
+@register_exception(404, "Provider not supported")
+class ProviderNotSupportedError(YoutubeAutoDeleteApiError):
+    """The requested provider is not available."""
+
+    pass
+
+
+@register_exception(404, "Playlist not found")
+class PlaylistNotFoundError(YoutubeAutoDeleteApiError):
+    """Playlist not found on the provider."""
+
+    pass
+
+
+@register_exception(status.HTTP_400_BAD_REQUEST, "Invalid playlist operation")
+class InvalidPlaylistOperationError(YoutubeAutoDeleteApiError):
+    """The playlist operation breaks a business rule."""
+
+    pass
+
+
+@register_exception(status.HTTP_502_BAD_GATEWAY, "The music provider returned an error")
+class ProviderRequestError(YoutubeAutoDeleteApiError):
+    """Call to an external provider failed."""
+
+    pass

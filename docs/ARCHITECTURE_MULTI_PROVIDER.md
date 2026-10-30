@@ -1,5 +1,10 @@
 # Propuesta de Arquitectura Multi-Proveedor
 
+> **Estado:** implementado en una versión simplificada. Ver `src/domain/providers/`
+> (puerto `PlaylistProvider`), `src/infrastructure/providers/` (adaptador de YouTube y
+> proveedores mock para Spotify, Apple Music y Amazon Music) y
+> `src/application/services/playlist_management_service.py`. Endpoints en `/v1/providers`.
+
 ## 🎯 Objetivo
 
 Reestructurar la arquitectura actual para soportar múltiples proveedores de música/video (YouTube, Spotify, etc.) de manera escalable, manteniendo los principios de Clean Architecture y DDD.

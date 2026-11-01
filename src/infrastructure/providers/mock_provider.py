@@ -38,8 +38,11 @@ class MockPlaylistProvider(PlaylistProvider):
 
     is_mock = True
 
-    def __init__(self, provider_type: ProviderType, user_id: str):
+    def __init__(
+        self, provider_type: ProviderType, user_id: str, connectable: bool = False
+    ):
         self.provider_type = provider_type
+        self.connectable = connectable
         self._user_id = user_id
         key = (provider_type, user_id)
         if key not in _libraries:

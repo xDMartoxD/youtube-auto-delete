@@ -12,10 +12,13 @@ class PlaylistProvider(ABC):
 
     Implementations live in the infrastructure layer. `is_mock` is True for
     providers that serve demo data instead of talking to the real service.
+    `connectable` is True when the user can link their own account (OAuth)
+    to switch from demo data to the real service.
     """
 
     provider_type: ProviderType
     is_mock: bool = False
+    connectable: bool = False
 
     @abstractmethod
     async def list_playlists(self) -> list[Playlist]:

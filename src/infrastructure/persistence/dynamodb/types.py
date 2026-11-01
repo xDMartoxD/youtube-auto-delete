@@ -11,3 +11,4 @@ class Types(StrEnum):
     TOKEN = "TOKEN"
     EMAIL = "EMAIL"
     SUGGESTION = "SUGGESTION"
+    CONNECTION = "CONNECTION"

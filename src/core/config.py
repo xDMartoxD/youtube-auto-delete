@@ -35,6 +35,26 @@ class Config(BaseSettings):
         default=None, description="Google OAuth client secret"
     )
 
+    # Spotify OAuth settings (client secret comes from env / Secrets Manager)
+    spotify_client_id: str | None = Field(
+        default=None, description="Spotify app client ID (enables real Spotify)"
+    )
+    spotify_client_secret: str | None = Field(
+        default=None, description="Spotify app client secret"
+    )
+    spotify_redirect_uri: str = Field(
+        default="http://127.0.0.1:8080/v1/providers/spotify/callback",
+        description="Redirect URI registered in the Spotify dashboard",
+    )
+    frontend_url: str = Field(
+        default="http://localhost:5173",
+        description="Where users return after connecting a provider",
+    )
+
+    @property
+    def spotify_enabled(self) -> bool:
+        return bool(self.spotify_client_id and self.spotify_client_secret)
+
     # JWT settings
     jwt_secret: str = Field(default="jwt_secret", description="JWT secret key")
 

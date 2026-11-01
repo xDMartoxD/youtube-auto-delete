@@ -6,7 +6,13 @@ import pytest
 from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
 
-from src.api.deps import _get_google_client, get_playlist_management_service
+from src.api.deps import (
+    _get_google_client,
+    get_playlist_management_service,
+    get_provider_connection_service,
+)
+from src.core.config import config
+from src.core.exceptions import InvalidPlaylistOperationError
 from src.application.services.playlist_management_service import (
     PlaylistManagementService,
 )
@@ -55,7 +61,7 @@ class TestProvidersEndpoints:
 
         assert response.status_code == 200
         assert response.json()["providers"] == [
-            {"id": "spotify", "name": "Spotify", "is_mock": True}
+            {"id": "spotify", "name": "Spotify", "is_mock": True, "connectable": False}
         ]
 
     def test_unknown_provider_is_rejected(self, client):
@@ -122,3 +128,41 @@ class TestProvidersEndpoints:
 
         assert response.status_code == 201
         assert response.json()["playlist"]["name"] == "Only in A"
+
+
+class TestProviderCallback:
+    """The OAuth callback always sends the browser back to the frontend."""
+
+    @pytest.fixture
+    def connection_service(self, app):
+        service = AsyncMock()
+        app.dependency_overrides[get_provider_connection_service] = lambda: service
+        yield service
+        app.dependency_overrides.clear()
+
+    def callback(self, app, query: str):
+        return TestClient(app).get(
+            f"/v1/providers/spotify/callback?{query}", follow_redirects=False
+        )
+
+    def test_success_redirects_with_connected_flag(self, app, connection_service):
+        response = self.callback(app, "code=abc&state=xyz")
+
+        connection_service.complete.assert_awaited_once()
+        assert response.status_code == 303
+        assert response.headers["location"] == f"{config.frontend_url}/?connected=spotify"
+
+    def test_denied_consent_redirects_with_error(self, app, connection_service):
+        response = self.callback(app, "error=access_denied&state=xyz")
+
+        connection_service.complete.assert_not_awaited()
+        assert "connect_error=Access+was+not+granted" in response.headers["location"]
+
+    def test_invalid_state_redirects_with_user_message(self, app, connection_service):
+        connection_service.complete.side_effect = InvalidPlaylistOperationError(
+            message="bad", user_message="The connection link expired, try again"
+        )
+
+        response = self.callback(app, "code=abc&state=bad")
+
+        assert "connect_error=The+connection+link+expired" in response.headers["location"]

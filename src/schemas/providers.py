@@ -10,6 +10,9 @@ class ProviderInfo(BaseModel):
     id: ProviderType = Field(description="Provider identifier")
     name: str = Field(description="Display name")
     is_mock: bool = Field(description="True when the provider serves demo data")
+    connectable: bool = Field(
+        description="True when the user can link (or unlink) their own account"
+    )
 
     @classmethod
     def from_provider(cls, provider: PlaylistProvider) -> "ProviderInfo":
@@ -17,7 +20,12 @@ class ProviderInfo(BaseModel):
             id=provider.provider_type,
             name=provider.provider_type.display_name,
             is_mock=provider.is_mock,
+            connectable=provider.connectable,
         )
+
+
+class ConnectResponse(BaseModel):
+    authorize_url: str = Field(description="Send the browser here to grant access")
 
 
 class ProviderListResponse(BaseModel):

@@ -9,12 +9,16 @@ from src.infrastructure.providers.youtube_provider import (
 
 
 def build_providers(
-    youtube_service: YoutubePlaylistGateway, user_id: str
+    youtube_service: YoutubePlaylistGateway,
+    user_id: str,
+    *,
+    spotify: PlaylistProvider | None = None,
+    spotify_connectable: bool = False,
 ) -> dict[ProviderType, PlaylistProvider]:
     """
-    Real integrations: YouTube and YouTube Music (same Data API).
-    Mock integrations: Spotify, Apple Music, Amazon Music. Replace the mock with a
-    real adapter here once OAuth for that service is set up.
+    Real integrations: YouTube and YouTube Music (same Data API), and Spotify
+    when the user has connected their account (`spotify`).
+    Mock integrations: Apple Music, Amazon Music, and Spotify until connected.
     """
     return {
         ProviderType.YOUTUBE: YoutubePlaylistProvider(
@@ -23,7 +27,10 @@ def build_providers(
         ProviderType.YOUTUBE_MUSIC: YoutubePlaylistProvider(
             youtube_service, ProviderType.YOUTUBE_MUSIC
         ),
-        ProviderType.SPOTIFY: MockPlaylistProvider(ProviderType.SPOTIFY, user_id),
+        ProviderType.SPOTIFY: spotify
+        or MockPlaylistProvider(
+            ProviderType.SPOTIFY, user_id, connectable=spotify_connectable
+        ),
         ProviderType.APPLE_MUSIC: MockPlaylistProvider(
             ProviderType.APPLE_MUSIC, user_id
         ),

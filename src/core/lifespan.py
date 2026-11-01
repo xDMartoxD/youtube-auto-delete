@@ -3,6 +3,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from src.infrastructure.external_services.google_client import GoogleClient
+from src.infrastructure.external_services.spotify_client import SpotifyClient
 from src.infrastructure.persistence.dynamodb.table import ensure_table
 from src.core.cache import get_redis_client, close_redis_client
 
@@ -17,6 +18,8 @@ async def lifespan(app):
     # Initialize Google Client
     google_client = GoogleClient()
     app.state.google_client = google_client
+    spotify_client = SpotifyClient()
+    app.state.spotify_client = spotify_client
 
     # Initialize Redis client
     logger.info("Attempting to connect to Redis...")
@@ -36,4 +39,5 @@ async def lifespan(app):
         yield
     finally:
         await google_client.close()
+        await spotify_client.close()
         await close_redis_client()

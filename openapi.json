@@ -917,6 +917,93 @@
           }
         }
       }
+    },
+    "/v1/providers/{provider}/connect": {
+      "post": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Connect Provider",
+        "description": "Start linking the user's account: returns the provider's consent URL.",
+        "operationId": "connect_provider_v1_providers__provider__connect_post",
+        "security": [
+          {
+            "Session Cookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/providers/{provider}/connection": {
+      "delete": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Disconnect Provider",
+        "description": "Unlink the user's account; the provider falls back to demo data.",
+        "operationId": "disconnect_provider_v1_providers__provider__connection_delete",
+        "security": [
+          {
+            "Session Cookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -953,6 +1040,20 @@
         ],
         "title": "CompositionMode",
         "description": "How source playlists are combined into a new one."
+      },
+      "ConnectResponse": {
+        "properties": {
+          "authorize_url": {
+            "type": "string",
+            "title": "Authorize Url",
+            "description": "Send the browser here to grant access"
+          }
+        },
+        "type": "object",
+        "required": [
+          "authorize_url"
+        ],
+        "title": "ConnectResponse"
       },
       "ContentDetails": {
         "properties": {
@@ -1668,13 +1769,19 @@
             "type": "boolean",
             "title": "Is Mock",
             "description": "True when the provider serves demo data"
+          },
+          "connectable": {
+            "type": "boolean",
+            "title": "Connectable",
+            "description": "True when the user can link (or unlink) their own account"
           }
         },
         "type": "object",
         "required": [
           "id",
           "name",
-          "is_mock"
+          "is_mock",
+          "connectable"
         ],
         "title": "ProviderInfo"
       },

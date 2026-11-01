@@ -12,6 +12,10 @@ from src.application.services.suggestions_service import SuggestionsService
 from src.application.services.playlist_management_service import (
     PlaylistManagementService,
 )
+from src.application.services.provider_connection_service import (
+    ProviderConnectionService,
+    is_connectable,
+)
 from src.infrastructure.external_services.google_client import GoogleClient
 from src.infrastructure.repositories.dynamodb_user_repository import (
     DynamoDBUserRepository,
@@ -26,6 +30,12 @@ from src.domain.services.playlist_composition_service import (
     PlaylistCompositionService,
 )
 from src.infrastructure.providers import build_providers
+from src.infrastructure.providers.spotify_provider import SpotifyPlaylistProvider
+from src.infrastructure.external_services.spotify_client import SpotifyClient
+from src.infrastructure.repositories.dynamodb_provider_connection_repository import (
+    DynamoDBProviderConnectionRepository,
+)
+from src.domain.providers import ProviderType
 from src.infrastructure.services.jwt_service import JWTService
 from src.infrastructure.services.cache_service import CacheService
 
@@ -176,12 +186,50 @@ suggestions_service_dependency = Annotated[
 ]
 
 
+@lru_cache
+def _get_provider_connection_repository() -> DynamoDBProviderConnectionRepository:
+    return DynamoDBProviderConnectionRepository()
+
+
+def _get_spotify_client(request: Request) -> SpotifyClient:
+    # Single instance created in lifespan (request.app.state)
+    return request.app.state.spotify_client
+
+
+def get_provider_connection_service(
+    spotify_client: SpotifyClient = Depends(_get_spotify_client),
+    connections: DynamoDBProviderConnectionRepository = Depends(
+        _get_provider_connection_repository
+    ),
+) -> ProviderConnectionService:
+    return ProviderConnectionService(spotify_client, connections)
+
+
+provider_connection_service_dependency = Annotated[
+    ProviderConnectionService, Depends(get_provider_connection_service)
+]
+
+
 async def get_playlist_management_service(
     session: current_session_dependency,
     youtube_service: youtube_service_dependency,
+    connection_service: provider_connection_service_dependency,
+    spotify_client: SpotifyClient = Depends(_get_spotify_client),
+    connections: DynamoDBProviderConnectionRepository = Depends(
+        _get_provider_connection_repository
+    ),
 ) -> AsyncGenerator[PlaylistManagementService, None]:
     """Create the multi-provider playlist service for the authenticated user."""
-    providers = build_providers(youtube_service, session["user_sub"])
+    user_id = session["user_sub"]
+    spotify_connection = await connection_service.find(user_id, ProviderType.SPOTIFY)
+    providers = build_providers(
+        youtube_service,
+        user_id,
+        spotify=SpotifyPlaylistProvider(spotify_client, spotify_connection, connections)
+        if spotify_connection
+        else None,
+        spotify_connectable=is_connectable(ProviderType.SPOTIFY),
+    )
     svc = PlaylistManagementService(
         providers=providers,
         composition_service=PlaylistCompositionService(),

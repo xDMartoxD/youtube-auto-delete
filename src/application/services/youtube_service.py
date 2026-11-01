@@ -541,7 +541,10 @@ class YoutubeService:
 
     async def _delete_items_batch(self, playlist_id: str, item_ids: list[str]) -> int:
         """
-        Delete playlist items in batch (concurrently).
+        Delete playlist items one at a time.
+
+        Deletes run sequentially: YouTube rejects concurrent changes to the same
+        playlist with 409 Conflict, and the API client is not thread-safe.
 
         Args:
             playlist_id: ID of the playlist
@@ -550,17 +553,11 @@ class YoutubeService:
         Returns:
             Number of successfully deleted items
         """
-        if not item_ids:
-            return 0
-
-        # Delete items concurrently
-        tasks = [
-            self._delete_playlist_item(playlist_id, item_id) for item_id in item_ids
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Count successful deletions (True values, ignoring exceptions)
-        return sum(1 for result in results if result is True)
+        deleted = 0
+        for item_id in item_ids:
+            if await self._delete_playlist_item(playlist_id, item_id):
+                deleted += 1
+        return deleted
 
     async def delete_playlist_videos(
         self,

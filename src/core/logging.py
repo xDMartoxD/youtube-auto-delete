@@ -109,13 +109,13 @@ def setup_logging(level: int = logging.INFO) -> None:
     logging.getLogger("google").setLevel(logging.WARNING)
 
     # Logger específico para la aplicación
-    app_logger = logging.getLogger("youtube_auto_delete")
+    app_logger = logging.getLogger("playlistmaster")
     app_logger.setLevel(logging.DEBUG)
 
 
 def get_logger(name: str) -> logging.Logger:
     """Obtiene un logger con el nombre especificado."""
-    return logging.getLogger(f"youtube_auto_delete.{name}")
+    return logging.getLogger(f"playlistmaster.{name}")
 
 
 def log_with_context(logger: logging.Logger, level: int, message: str, **context):

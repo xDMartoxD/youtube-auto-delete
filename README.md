@@ -1,4 +1,4 @@
-# YouTube Auto Delete API
+# PlaylistMaster API
 
 API backend para gestionar y eliminar videos de playlists de YouTube automáticamente. Construida con FastAPI siguiendo principios de Clean Architecture y Domain-Driven Design.
 

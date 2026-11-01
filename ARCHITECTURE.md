@@ -1,6 +1,6 @@
 # Arquitectura del Proyecto
 
-Este documento describe la arquitectura del proyecto YouTube Auto Delete API, basada en **Clean Architecture** y **Domain-Driven Design (DDD)**.
+Este documento describe la arquitectura del proyecto PlaylistMaster API, basada en **Clean Architecture** y **Domain-Driven Design (DDD)**.
 
 ## 📐 Principios Arquitectónicos
 
@@ -309,7 +309,7 @@ Sistema centralizado con registry pattern:
 
 ```python
 @register_exception(401, "Authentication failed")
-class AuthenticationFailedError(YoutubeAutoDeleteApiError):
+class AuthenticationFailedError(PlaylistMasterApiError):
     pass
 ```
 

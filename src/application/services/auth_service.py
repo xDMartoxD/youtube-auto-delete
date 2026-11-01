@@ -13,7 +13,7 @@ from src.infrastructure.services.cache_service import CacheService
 from src.core.exceptions import (
     AuthenticationFailedError,
     LogoutFailedError,
-    YoutubeAutoDeleteApiError,
+    PlaylistMasterApiError,
 )
 from src.schemas.auth import (
     GoogleUserResponse,
@@ -147,7 +147,7 @@ class AuthService:
             ) from e
         except Exception as e:
             logger.exception("Unexpected error in exchange_code")
-            raise YoutubeAutoDeleteApiError() from e
+            raise PlaylistMasterApiError() from e
 
     def get_session_cookie_data(
         self, session_token: str, expires_at: int

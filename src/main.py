@@ -18,7 +18,7 @@ logger = getLogger(__name__)
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(lifespan=lifespan, title="Youtube Auto Delete API")
+    app = FastAPI(lifespan=lifespan, title="PlaylistMaster API")
 
     # Setup
     setup_logging()
